@@ -11,5 +11,8 @@ coverage
 # Benchmarking
 benchmarks/graphs
 
+#firebase
+service-account-key.json
+
 # ignore additional files using core.excludesFile
 # https://git-scm.com/docs/gitignore

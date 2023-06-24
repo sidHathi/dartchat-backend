@@ -3,13 +3,20 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 
+import { profilesRouter, usersRouter } from './routers';
+import { isAuthenticated } from './middleware';
+
 dotenv.config();
 const app = express();
 
-// declare a route with a response
-app.get('/', (req, res) => {
-    res.send("What's up doc ?!");
-});
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+// use for auth:
+// app.use('/users', isAuthenticated, usersRouter);
+// app.use('/profiles', isAuthenticated, profilesRouter);
+app.use('/users', usersRouter);
+app.use('/profiles', profilesRouter);
 
 // start the server
 app.listen(process.env.BACK_PORT, () => {
