@@ -10,7 +10,7 @@ const findProfile: RequestHandler = async (req, res, next) => {
         }
         const qString = (req.query.qString || '') as string;
         const results = await profileService.profileSearch(qString);
-        res.status(201).send(results);
+        res.status(200).send(results);
     } catch (err) {
         next(err);
     }

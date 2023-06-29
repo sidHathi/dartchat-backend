@@ -1,5 +1,5 @@
 type UserProfile = {
-    id?: string;
+    id: string;
     handle: string;
     displayName: string;
     email?: string;
