@@ -1,17 +1,20 @@
 import { db } from '../firebase';
-import { Conversation, ConversationPreview, Message, UserData, UserProfile } from '../models';
+import { Conversation, ConversationPreview, Message, RawMessage, UserData, UserProfile, DBMessage } from '../models';
 import { cleanUndefinedFields } from '../utils';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import usersService from './users-service';
 import { v4 as uuid } from 'uuid';
+import { MessageCursor, getQueryForCursor } from '../pagination';
+import { parseDBMessage, parseRequestMessage } from '../utils';
 
 const usersCol = db.collection('users');
 const conversationsCol = db.collection('conversations');
 
 const createNewConversation = async (newConversation: Conversation) => {
     try {
-        conversationsCol.doc(newConversation.id).set(cleanUndefinedFields(newConversation));
-        addUsersToNewConversation(newConversation);
+        await conversationsCol.doc(newConversation.id).set(cleanUndefinedFields(newConversation));
+        await conversationsCol.doc(newConversation.id).collection('messages');
+        await addUsersToNewConversation(newConversation);
         return newConversation;
     } catch (err) {
         return Promise.reject(err);
@@ -24,10 +27,10 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
             cid: newConversation.id,
             name: newConversation.name,
             unSeenMessages: 0,
-            lastMessageTime: new Date().toString()
+            lastMessageTime: new Date()
         };
-        newConversation.participants.map((participant) => {
-            usersCol.doc(participant.id).update({
+        newConversation.participants.map(async (participant) => {
+            await usersCol.doc(participant.id).update({
                 conversations: FieldValue.arrayUnion(preview)
             });
         });
@@ -58,71 +61,138 @@ const generateConversationInitMessage = async (newConversation: Conversation, us
     }
 };
 
+const updateUserConversationPreviews = async (
+    cid: string,
+    cName: string,
+    participantIds: string[],
+    message: Message
+) => {
+    participantIds.map(async (id) => {
+        const userDoc = await usersCol.doc(id).get();
+        if (userDoc.exists) {
+            const user = userDoc.data() as UserData;
+            let unSeenMessages = 0;
+            const matchingConvos = user.conversations.filter((c) => c.cid === cid);
+            if (matchingConvos.length > 0) {
+                unSeenMessages = matchingConvos[0].unSeenMessages;
+            }
+            usersCol.doc(id).update({
+                conversations: [
+                    ...user.conversations.filter((c) => c.cid !== cid),
+                    {
+                        cid: cid,
+                        name: cName,
+                        unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
+                        lastMessageTime: message.timestamp,
+                        lastMessageContent: message.content
+                    }
+                ]
+            });
+        }
+    });
+};
+
 const storeNewMessage = async (cid: string, message: Message) => {
     try {
         const convoDoc = await conversationsCol.doc(cid).get();
-        const res = await conversationsCol.doc(cid).update({
-            messages: FieldValue.arrayUnion(message)
-        });
+        const parsedMessage = parseRequestMessage(message);
+        const messageDoc = conversationsCol.doc(cid).collection('messages').doc(message.id);
+        const res = await messageDoc.set(parsedMessage);
         const convo = convoDoc.data() as Conversation;
         if (!convo) return Promise.reject('no such conversation');
-        const participants = convo.participants;
-        participants.map(async (participant) => {
-            const userDoc = await usersCol.doc(participant.id).get();
-            if (userDoc.exists) {
-                const user = userDoc.data() as UserData;
-                let unSeenMessages = 0;
-                const matchingConvos = user.conversations.filter((c) => c.cid === cid);
-                if (matchingConvos.length > 0) {
-                    unSeenMessages = matchingConvos[0].unSeenMessages;
-                }
-                usersCol.doc(participant.id).update({
-                    conversations: [
-                        ...user.conversations.filter((c) => c.cid !== cid),
-                        {
-                            cid: convo.id,
-                            name: convo.name,
-                            unSeenMessages: unSeenMessages + 1,
-                            lastMessageTime: message.timestamp,
-                            lastMessageContent: message.content
-                        }
-                    ]
-                });
-            }
-        });
+        const participantIds = convo.participants.map((p) => p.id);
+        await updateUserConversationPreviews(convo.id, convo.name, participantIds, parsedMessage);
         return res;
     } catch (err) {
         return Promise.reject(err);
     }
 };
 
-const getConversation = async (cid: string) => {
+const getConversation = async (cid: string, messageCursor: MessageCursor) => {
     try {
-        const convo = (await conversationsCol.doc(cid).get()).data() as Conversation;
-        return convo;
+        const convoRes = await conversationsCol.doc(cid).get();
+        const messageColRef = conversationsCol.doc(cid).collection('messages');
+        const messageDocs = await getQueryForCursor(messageColRef, messageCursor).get();
+        const messages: Message[] = [];
+        messageDocs.forEach((md) => {
+            messages.push(parseDBMessage(md.data() as DBMessage));
+        });
+        // messages.reverse();
+        if (convoRes.exists) {
+            const rawConvo = convoRes.data() as Conversation;
+            rawConvo.messages = messages;
+            return rawConvo;
+        }
+        return null;
     } catch (err) {
         return Promise.reject(err);
     }
 };
 
-const storeNewLike = async (cid: string, mid: string, uid: string) => {
+const getConversationMessages = async (cid: string, messageCursor: MessageCursor) => {
     try {
-        const convo = (await conversationsCol.doc(cid).get()).data() as Conversation;
-        const messages = convo.messages;
-        const matchingMessages = messages.filter((m) => m.id === mid);
-        if (matchingMessages.length > 0) {
-            const message = matchingMessages[0];
-            const likedMessage = {
-                ...message,
-                likes: [...message.likes, uid]
-            };
-            const newMessageHistory = [...messages.filter((m) => m.id !== mid), likedMessage].sort(
-                (m1, m2) => m1.timestamp.getTime() - m2.timestamp.getTime()
-            );
-            return await conversationsCol.doc(cid).update({
-                ...convo,
-                messages: newMessageHistory
-            });
+        const messageColRef = conversationsCol.doc(cid).collection('messages');
+        const messageDocs = await getQueryForCursor(messageColRef, messageCursor).get();
+        const messages: Message[] = [];
+        messageDocs.forEach((md) => {
+            messages.push(parseDBMessage(md.data() as DBMessage));
+        });
+        // messages.reverse();
+        return messages;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getConversationMessagesToDate = async (cid: string, messageCursor: MessageCursor, date: Date) => {
+    try {
+        const messages: Message[] = [];
+        const cursor = { ...messageCursor };
+        while (messages.length == 0 || messages[messages.length - 1].timestamp.getTime() - date.getTime() > 0) {
+            messages.push(...(await getConversationMessages(cid, cursor)));
+            cursor.prevLastVal = messages[messages.length - 1].timestamp;
+        }
+        return messages;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getConversationMessage = async (cid: string, mid: string) => {
+    try {
+        const message = await conversationsCol.doc(cid).collection('messages').doc(mid).get();
+        if (message.exists) {
+            return parseDBMessage(message.data() as DBMessage);
+        }
+        return Promise.reject('no such message');
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const conversationExists = async (cid: string) => {
+    try {
+        const convoDoc = await conversationsCol.doc(cid).get();
+        return convoDoc.exists;
+    } catch (err) {
+        console.log(err);
+        return false;
+    }
+};
+
+const storeNewLike = async (cid: string, mid: string, uid: string, type: string) => {
+    try {
+        const messageDoc = await conversationsCol.doc(cid).collection('messages').doc(mid).get();
+        if (messageDoc.exists) {
+            const message = messageDoc.data() as Message;
+            let updatedLikes = message.likes;
+            if (type === 'newLike' && !message.likes.includes(uid)) {
+                updatedLikes = [...message.likes, uid];
+            } else if (type === 'disLike') {
+                updatedLikes = message.likes.filter((u) => u !== uid);
+            }
+            const res = await conversationsCol.doc(cid).collection('messages').doc(mid).update({ likes: updatedLikes });
+            return res;
         }
         return Promise.reject('no such message');
     } catch (err) {
@@ -154,6 +224,12 @@ const deleteConversation = async (cid: string, userId: string) => {
                 });
             }
         });
+        const messageDocs = await conversationsCol.doc(cid).collection('messages').get();
+        const batch = db.batch();
+        messageDocs.forEach((md) => {
+            batch.delete(md.ref);
+        });
+        await batch.commit();
         const delRes = await conversationsCol.doc(cid).delete();
         return delRes;
     } catch (err) {
@@ -167,6 +243,10 @@ const conversationsService = {
     generateConversationInitMessage,
     storeNewMessage,
     getConversation,
+    getConversationMessages,
+    getConversationMessage,
+    getConversationMessagesToDate,
+    conversationExists,
     deleteConversation,
     storeNewLike
 };

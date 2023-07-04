@@ -1,7 +1,7 @@
 import { db } from '../firebase';
-import { UserData } from '../models';
+import { DBUserData, UserData } from '../models';
 import profileService from './profiles-service';
-import { cleanUndefinedFields } from '../utils';
+import { cleanUndefinedFields, parseDBUserData } from '../utils';
 import { Socket } from 'socket.io';
 
 const usersCol = db.collection('users');
@@ -12,7 +12,7 @@ const getCurrentUser = async (userId: string): Promise<UserData | never> => {
         if (!currentUser.exists) {
             return Promise.reject('User does not exist');
         }
-        return currentUser.data() as UserData;
+        return parseDBUserData(currentUser.data() as DBUserData);
     } catch (err) {
         return Promise.reject(err);
     }
@@ -91,8 +91,9 @@ const checkValidPhone = async (userData: UserData): Promise<boolean | never> => 
 
 const handleReadReceipt = async (uid: string, cid: string) => {
     try {
-        const user = (await usersCol.doc(uid).get()).data() as UserData | undefined;
-        if (user) {
+        const userDoc = await usersCol.doc(uid).get();
+        if (userDoc.exists) {
+            const user = parseDBUserData(userDoc.data() as DBUserData);
             const previews = user.conversations.filter((c) => c.cid === cid);
             if (previews && previews.length > 0) {
                 const preview = previews[0];

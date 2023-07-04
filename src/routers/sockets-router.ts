@@ -2,12 +2,13 @@ import { Conversation, Message } from 'models';
 import { Socket } from 'socket.io';
 import { conversationSocket, userSocket } from '../sockets';
 
-const socketUserMap: { [socketId: string]: string } = {};
+const userSocketMap: { [userId: string]: string } = {};
 
 const socketsRouter = (socket: Socket) => {
+    socket.emit('connected');
     console.log(`a user connected with id ${socket.id}`);
-    socketUserMap[socket.id] = socket.data.user.uid;
-    console.log(socketUserMap);
+    userSocketMap[socket.data.user.uid] = socket.id;
+    console.log(userSocketMap);
     userSocket.onUserAuth(socket);
 
     socket.on('joinRoom', (rid: string[]) => {
@@ -16,7 +17,7 @@ const socketsRouter = (socket: Socket) => {
     });
 
     socket.on('newConversation', (newConvo: Conversation) =>
-        conversationSocket.newConversation(socket, newConvo, socketUserMap)
+        conversationSocket.newConversation(socket, newConvo, userSocketMap)
     );
 
     socket.on('deleteConversation', (cid: string) => conversationSocket.conversationDelete(socket, cid));
@@ -35,7 +36,9 @@ const socketsRouter = (socket: Socket) => {
 
     socket.on('disconnect', () => {
         console.log(`user disconnected`);
-        delete socketUserMap[socket.id];
+        if (socket.data.user.uid && socket.data.user.uid in userSocketMap) {
+            delete userSocketMap[socket.data.user.uid];
+        }
         socket.disconnect();
     });
 };

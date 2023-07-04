@@ -5,22 +5,25 @@ import { conversationsService } from '../services';
 const newConversation = async (
     socket: Socket,
     newConvo: Conversation,
-    socketUserMap: { [socketId: string]: string }
-): Promise<Conversation | never> => {
+    userSocketMap: { [userId: string]: string }
+): Promise<Conversation | null> => {
     console.log('new conversation message received');
-    console.log(socketUserMap);
     socket.join(newConvo.id);
     try {
         const user = socket.data.user;
+        if (await conversationsService.conversationExists(newConvo.id)) {
+            return newConvo;
+        }
         const seedMessage = await conversationsService.generateConversationInitMessage(newConvo, user.uid);
         await conversationsService.createNewConversation(newConvo);
         await conversationsService.storeNewMessage(newConvo.id, seedMessage);
-        const onlineUsers: string[] = Object.entries(socketUserMap)
-            .filter(([, uid]) => {
+        const onlineUsers: string[] = Object.keys(userSocketMap)
+            .filter((uid) => {
                 return uid !== user.uid;
             })
-            .map(([sid]) => sid);
+            .map((uid) => userSocketMap[uid]);
         onlineUsers.forEach((usid) => {
+            console.log(usid);
             socket.broadcast.to(usid).emit('newConversation', newConvo);
         });
         socket.to(newConvo.id).emit('newMessage', newConvo.id, seedMessage);
@@ -29,7 +32,7 @@ const newConversation = async (
         return newConvo;
     } catch (err) {
         console.log(err);
-        return Promise.reject(err);
+        return null;
     }
 };
 
@@ -64,7 +67,7 @@ const newLikeEvent = async (socket: Socket, cid: string, mid: string, event: Eve
         const uid = socket.data.user.uid;
         socket.to(cid).emit('newLikeEvent', cid, mid, uid, event);
         console.log('new like sent');
-        // await conversationsService.handleNewLikeEvent(cid, mid, uid, event);
+        await conversationsService.storeNewLike(cid, mid, uid, event.type);
         return true;
     } catch (err) {
         return Promise.reject(err);

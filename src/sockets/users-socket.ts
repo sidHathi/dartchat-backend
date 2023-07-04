@@ -11,16 +11,18 @@ const onUserAuth = async (socket: Socket) => {
         });
         return user;
     } catch (err) {
-        return Promise.reject(err);
+        return null;
     }
 };
 
 const onReadReceipt = async (socket: Socket, cid: string) => {
     try {
         const uid = socket.data.user.uid;
-        return await usersService.handleReadReceipt(uid, cid);
+        const res = await usersService.handleReadReceipt(uid, cid);
+        if (res) return res;
+        return null;
     } catch (err) {
-        return Promise.reject(err);
+        return null;
     }
 };
 

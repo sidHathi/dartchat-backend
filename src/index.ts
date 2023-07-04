@@ -21,6 +21,10 @@ app.use('/conversations', isAuthenticated, conversationsRouter);
 // app.use('/users', usersRouter);
 // app.use('/profiles', profilesRouter);
 
+app.get('/', (req, res, next) => {
+    res.status(204).send();
+});
+
 const server = http.createServer(app);
 const io = new Server(server);
 
