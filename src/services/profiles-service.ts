@@ -1,6 +1,6 @@
 import { db } from '../firebase';
 import { UserData, UserProfile } from '../models';
-import { cleanUndefinedFields } from '../utils';
+import { cleanUndefinedFields } from '../utils/request-utils';
 import { Filter } from 'firebase-admin/firestore';
 
 const profileCol = db.collection('profiles');
@@ -30,7 +30,8 @@ const updateProfile = async (updatedUser: UserData) => {
             handle: updatedUser.handle,
             phone: updatedUser.phone,
             email: updatedUser.email,
-            displayName: updatedUser.displayName || updatedUser.handle
+            displayName: updatedUser.displayName || updatedUser.handle,
+            avatar: updatedUser.avatar
         };
         profileCol.doc(updatedUser.id).update(cleanUndefinedFields(updatedUserProfile));
         return updatedUserProfile;

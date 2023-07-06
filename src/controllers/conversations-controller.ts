@@ -2,7 +2,7 @@ import { RequestHandler } from 'express';
 import { conversationsService } from '../services';
 import { Conversation, Message } from '../models';
 import { MessageCursor, encodeCursor, getNextCursor, getCursorForQuery } from '../pagination';
-import { getErrorMessage } from '../utils';
+import { getErrorMessage } from '../utils/request-utils';
 
 const getConversation: RequestHandler = async (req, res, next) => {
     try {

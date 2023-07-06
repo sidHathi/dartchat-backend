@@ -1,4 +1,4 @@
-import { DBMessage, Message, RawMessage, DBUserData, UserData, DBConversationPreview } from './models';
+import { DBMessage, Message, RawMessage, DBUserData, UserData, DBConversationPreview } from '../models';
 
 export const cleanUndefinedFields = (obj: any) => {
     return Object.keys(obj).reduce((acc: any, key) => {

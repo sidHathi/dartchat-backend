@@ -1,18 +1,28 @@
 import { db } from '../firebase';
-import { Conversation, ConversationPreview, Message, RawMessage, UserData, UserProfile, DBMessage } from '../models';
-import { cleanUndefinedFields } from '../utils';
+import {
+    Conversation,
+    ConversationPreview,
+    Message,
+    RawMessage,
+    UserData,
+    UserProfile,
+    DBMessage,
+    AvatarImage
+} from '../models';
+import { cleanUndefinedFields } from '../utils/request-utils';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import usersService from './users-service';
 import { v4 as uuid } from 'uuid';
 import { MessageCursor, getQueryForCursor } from '../pagination';
-import { parseDBMessage, parseRequestMessage } from '../utils';
+import { parseDBMessage, parseRequestMessage } from '../utils/request-utils';
+import { cleanConversation, getUserConversationAvatar } from '../utils/conversation-utils';
 
 const usersCol = db.collection('users');
 const conversationsCol = db.collection('conversations');
 
 const createNewConversation = async (newConversation: Conversation) => {
     try {
-        await conversationsCol.doc(newConversation.id).set(cleanUndefinedFields(newConversation));
+        await conversationsCol.doc(newConversation.id).set(cleanConversation(newConversation));
         await conversationsCol.doc(newConversation.id).collection('messages');
         await addUsersToNewConversation(newConversation);
         return newConversation;
@@ -31,7 +41,10 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
         };
         newConversation.participants.map(async (participant) => {
             await usersCol.doc(participant.id).update({
-                conversations: FieldValue.arrayUnion(preview)
+                conversations: FieldValue.arrayUnion({
+                    ...preview,
+                    avatar: getUserConversationAvatar(newConversation, participant.id)
+                })
             });
         });
     } catch (err) {
@@ -61,7 +74,7 @@ const generateConversationInitMessage = async (newConversation: Conversation, us
     }
 };
 
-const updateUserConversationPreviews = async (
+const handleUserConversationMessage = async (
     cid: string,
     cName: string,
     participantIds: string[],
@@ -73,8 +86,10 @@ const updateUserConversationPreviews = async (
             const user = userDoc.data() as UserData;
             let unSeenMessages = 0;
             const matchingConvos = user.conversations.filter((c) => c.cid === cid);
+            let avatar: AvatarImage | undefined = undefined;
             if (matchingConvos.length > 0) {
                 unSeenMessages = matchingConvos[0].unSeenMessages;
+                avatar = matchingConvos[0].avatar;
             }
             usersCol.doc(id).update({
                 conversations: [
@@ -82,6 +97,7 @@ const updateUserConversationPreviews = async (
                     {
                         cid: cid,
                         name: cName,
+                        avatar,
                         unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
                         lastMessageTime: message.timestamp,
                         lastMessageContent: message.content
@@ -101,7 +117,7 @@ const storeNewMessage = async (cid: string, message: Message) => {
         const convo = convoDoc.data() as Conversation;
         if (!convo) return Promise.reject('no such conversation');
         const participantIds = convo.participants.map((p) => p.id);
-        await updateUserConversationPreviews(convo.id, convo.name, participantIds, parsedMessage);
+        await handleUserConversationMessage(convo.id, convo.name, participantIds, parsedMessage);
         return res;
     } catch (err) {
         return Promise.reject(err);

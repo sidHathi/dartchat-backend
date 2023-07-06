@@ -1,3 +1,5 @@
+import AvatarImage from './AvatarImage';
+
 type UserProfile = {
     id: string;
     handle: string;
@@ -6,7 +8,7 @@ type UserProfile = {
     phone?: string;
     alias?: string;
     // implement later!!
-    profilePic?: string;
+    avatar?: AvatarImage;
     publicEncryptionKey?: string;
 };
 

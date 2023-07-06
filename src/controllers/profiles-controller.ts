@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { profileService } from '../services';
-import { getErrorMessage } from '../utils';
+import { getErrorMessage } from '../utils/request-utils';
 
 const findProfile: RequestHandler = async (req, res, next) => {
     try {

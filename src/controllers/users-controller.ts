@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { usersService } from '../services';
 import { UserData } from '../models';
-import { getErrorMessage } from '../utils';
+import { getErrorMessage } from '../utils/request-utils';
 
 const getCurrentUser: RequestHandler = async (req, res, next) => {
     try {

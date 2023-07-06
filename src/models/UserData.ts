@@ -1,5 +1,6 @@
 import ConversationPreview, { DBConversationPreview } from './ConversationPreview';
 import UserProfile from './UserProfile';
+import AvatarImage from './AvatarImage';
 
 export type DBUserData = {
     id?: string;
@@ -8,7 +9,7 @@ export type DBUserData = {
     displayName?: string;
     phone?: string;
     // implement later!!;
-    profilePic?: string;
+    avatar?: AvatarImage;
     conversations: DBConversationPreview[];
     contacts: UserProfile[];
     privateEncryptionKey?: string;
@@ -21,7 +22,7 @@ type UserData = {
     displayName?: string;
     phone?: string;
     // implement later!!;
-    profilePic?: string;
+    avatar?: AvatarImage;
     conversations: ConversationPreview[];
     contacts: UserProfile[];
     privateEncryptionKey?: string;

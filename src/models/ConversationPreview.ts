@@ -1,11 +1,12 @@
 import { Timestamp } from 'firebase-admin/firestore';
+import AvatarImage from './AvatarImage';
 
 export type DBConversationPreview = {
     cid: string;
     name: string;
     lastMessageContent?: string;
     unSeenMessages: number;
-    avatar?: any;
+    avatar?: AvatarImage;
     lastMessageTime: Timestamp;
 };
 
@@ -14,7 +15,7 @@ type ConversationPreview = {
     name: string;
     lastMessageContent?: string;
     unSeenMessages: number;
-    avatar?: any;
+    avatar?: AvatarImage;
     lastMessageTime: Date;
 };
 

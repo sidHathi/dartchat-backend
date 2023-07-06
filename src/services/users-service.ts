@@ -1,7 +1,7 @@
 import { db } from '../firebase';
 import { DBUserData, UserData } from '../models';
 import profileService from './profiles-service';
-import { cleanUndefinedFields, parseDBUserData } from '../utils';
+import { cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { Socket } from 'socket.io';
 
 const usersCol = db.collection('users');
@@ -37,12 +37,15 @@ const createNewUser = async (userId: string, userDetails: UserData): Promise<Use
     }
 };
 
+// modifying this function so that it no longer touches conversation previews -> all updates to previews should happen on message send/convo creation
 const updateUser = async (userId: string, updatedUserDetails: UserData): Promise<UserData | never> => {
     try {
         const currUser = await getCurrentUser(userId);
         const updatedUser: UserData = {
+            ...currUser,
             ...updatedUserDetails,
-            id: userId
+            conversations: currUser.conversations,
+            id: currUser.id
         };
         if (currUser?.handle !== updatedUserDetails.handle && !(await checkValidHandle(updatedUser))) {
             return Promise.reject('Handle taken');
