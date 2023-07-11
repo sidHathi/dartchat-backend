@@ -1,15 +1,14 @@
 import { AvatarImage, Conversation } from 'models';
 import { cleanUndefinedFields } from './request-utils';
 
-export const cleanConversation = (convo: Conversation) => {
+export const cleanConversation = (convo: Conversation): Conversation => {
     if (convo.participants.length <= 2) {
         return cleanUndefinedFields({
             ...convo,
             avatar: undefined
-        });
-    } else if (convo.participants.length > 2) {
-        return cleanUndefinedFields(convo);
+        }) as Conversation;
     }
+    return cleanUndefinedFields(convo) as Conversation;
 };
 
 export const getUserConversationAvatar = (convo: Conversation, userId: string): AvatarImage | undefined => {

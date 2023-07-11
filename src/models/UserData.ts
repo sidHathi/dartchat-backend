@@ -13,6 +13,7 @@ export type DBUserData = {
     conversations: DBConversationPreview[];
     contacts: UserProfile[];
     privateEncryptionKey?: string;
+    pushTokens?: string[];
 };
 
 type UserData = {
@@ -26,6 +27,7 @@ type UserData = {
     conversations: ConversationPreview[];
     contacts: UserProfile[];
     privateEncryptionKey?: string;
+    pushTokens?: string[];
 };
 
 export default UserData;

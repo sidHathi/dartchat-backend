@@ -31,6 +31,15 @@ const createNewConversation = async (newConversation: Conversation) => {
     }
 };
 
+const getConversationInfo = async (cid: string): Promise<Conversation | never> => {
+    try {
+        const convo = await conversationsCol.doc(cid).get();
+        return cleanConversation(convo.data() as Conversation);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const addUsersToNewConversation = async (newConversation: Conversation) => {
     try {
         const preview: ConversationPreview = {
@@ -207,8 +216,8 @@ const storeNewLike = async (cid: string, mid: string, uid: string, type: string)
             } else if (type === 'disLike') {
                 updatedLikes = message.likes.filter((u) => u !== uid);
             }
-            const res = await conversationsCol.doc(cid).collection('messages').doc(mid).update({ likes: updatedLikes });
-            return res;
+            await conversationsCol.doc(cid).collection('messages').doc(mid).update({ likes: updatedLikes });
+            return message;
         }
         return Promise.reject('no such message');
     } catch (err) {
@@ -221,7 +230,7 @@ const deleteConversation = async (cid: string, userId: string) => {
         console.log('deleting conversation');
         const convo = (await conversationsCol.doc(cid).get()).data() as Conversation;
         if (!convo) {
-            const currentUser = await usersService.getCurrentUser(userId);
+            const currentUser = await usersService.getUser(userId);
             if (currentUser && currentUser.conversations) {
                 const res = await usersService.updateUser(userId, {
                     ...currentUser,
@@ -253,8 +262,23 @@ const deleteConversation = async (cid: string, userId: string) => {
     }
 };
 
+const updateConversationProfile = async (cid: string, newProfile: UserProfile) => {
+    try {
+        const convo = await getConversationInfo(cid);
+        const newParticipants = [...convo.participants.filter((p) => p.id !== newProfile.id), newProfile];
+        const res = await conversationsCol.doc(cid).update({
+            participants: newParticipants
+        });
+        return res;
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+};
+
 const conversationsService = {
     createNewConversation,
+    getConversationInfo,
     addUsersToNewConversation,
     generateConversationInitMessage,
     storeNewMessage,
@@ -264,7 +288,8 @@ const conversationsService = {
     getConversationMessagesToDate,
     conversationExists,
     deleteConversation,
-    storeNewLike
+    storeNewLike,
+    updateConversationProfile
 };
 
 export default conversationsService;

@@ -6,7 +6,7 @@ import { getErrorMessage } from '../utils/request-utils';
 const getCurrentUser: RequestHandler = async (req, res, next) => {
     try {
         const userId = res.locals?.uid;
-        const userRes = await usersService.getCurrentUser(userId);
+        const userRes = await usersService.getUser(userId);
         res.status(200).send(userRes);
     } catch (err) {
         if (getErrorMessage(err) === 'User does not exist') {
@@ -54,10 +54,25 @@ const modifyCurrentUser: RequestHandler = async (req, res, next) => {
     }
 };
 
+const updatePushTokens: RequestHandler = async (req, res, next) => {
+    try {
+        const userId = res.locals.uid;
+        const newToken = req.body.token as string;
+        if (await usersService.updatePushNotificationTokens(newToken, userId)) {
+            res.status(200).send();
+            return;
+        }
+        res.status(400).send();
+    } catch (err) {
+        next(err);
+    }
+};
+
 const usersController = {
     getCurrentUser,
     createNewUser,
-    modifyCurrentUser
+    modifyCurrentUser,
+    updatePushTokens
 };
 
 export default usersController;

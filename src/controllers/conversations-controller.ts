@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { conversationsService } from '../services';
-import { Conversation, Message } from '../models';
+import { Conversation, Message, UserProfile } from '../models';
 import { MessageCursor, encodeCursor, getNextCursor, getCursorForQuery } from '../pagination';
 import { getErrorMessage } from '../utils/request-utils';
 
@@ -99,12 +99,28 @@ const deleteConversation: RequestHandler = async (req, res, next) => {
     }
 };
 
+const updateConversationProfile: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const newProfile = req.body as UserProfile;
+        console.log('NEW PROFILE');
+        console.log(newProfile);
+        const updateRes = await conversationsService.updateConversationProfile(cid, newProfile);
+        if (updateRes) {
+            res.status(200).send(updateRes);
+        }
+    } catch (err) {
+        next(err);
+    }
+};
+
 const conversationsController = {
     getConversation,
     getConversationMessages,
     getConversationMessagesToDate,
     getConversationMessage,
-    deleteConversation
+    deleteConversation,
+    updateConversationProfile
 };
 
 export default conversationsController;

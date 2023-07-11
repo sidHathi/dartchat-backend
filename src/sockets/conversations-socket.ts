@@ -1,11 +1,13 @@
 import { Socket } from 'socket.io';
-import { Conversation, Message } from '../models';
+import { Conversation, Message, Event } from '../models';
 import { conversationsService } from '../services';
+import { PushNotificationsService } from 'services/pushNotifications-service';
 
 const newConversation = async (
     socket: Socket,
     newConvo: Conversation,
-    userSocketMap: { [userId: string]: string }
+    userSocketMap: { [userId: string]: string },
+    pnService?: PushNotificationsService
 ): Promise<Conversation | null> => {
     console.log('new conversation message received');
     socket.join(newConvo.id);
@@ -29,6 +31,9 @@ const newConversation = async (
         socket.to(newConvo.id).emit('newMessage', newConvo.id, seedMessage);
         socket.emit('newMessage', newConvo.id, seedMessage);
         socket.emit('conversationReceived', newConvo);
+        if (pnService) {
+            await pnService.pushNewConvo(newConvo, user.uid);
+        }
         return newConvo;
     } catch (err) {
         console.log(err);
@@ -36,7 +41,7 @@ const newConversation = async (
     }
 };
 
-const newMessage = async (socket: Socket, cid: string, message: Message) => {
+const newMessage = async (socket: Socket, cid: string, message: Message, pnService?: PushNotificationsService) => {
     console.log('new message received');
     // send the message to the appropriate room and store it in the conversation
     try {
@@ -44,6 +49,9 @@ const newMessage = async (socket: Socket, cid: string, message: Message) => {
         console.log(message);
         await conversationsService.storeNewMessage(cid, message);
         socket.to(cid).emit('newMessage', cid, message);
+        if (pnService) {
+            await pnService.pushMessage(cid, message);
+        }
         return message;
     } catch (err) {
         console.log(err);
@@ -62,12 +70,21 @@ const conversationDelete = async (socket: Socket, cid: string) => {
     }
 };
 
-const newLikeEvent = async (socket: Socket, cid: string, mid: string, event: Event) => {
+const newLikeEvent = async (
+    socket: Socket,
+    cid: string,
+    mid: string,
+    event: Event,
+    pnService?: PushNotificationsService
+) => {
     try {
         const uid = socket.data.user.uid;
         socket.to(cid).emit('newLikeEvent', cid, mid, uid, event);
         console.log('new like sent');
-        await conversationsService.storeNewLike(cid, mid, uid, event.type);
+        const message = await conversationsService.storeNewLike(cid, mid, uid, event.type);
+        if (pnService) {
+            await pnService.pushLike(cid, message, uid, event);
+        }
         return true;
     } catch (err) {
         return Promise.reject(err);

@@ -6,9 +6,8 @@ type UserProfile = {
     displayName: string;
     email?: string;
     phone?: string;
-    alias?: string;
-    // implement later!!
     avatar?: AvatarImage;
+    // implement later!!
     publicEncryptionKey?: string;
 };
 

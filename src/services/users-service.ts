@@ -3,16 +3,33 @@ import { DBUserData, UserData } from '../models';
 import profileService from './profiles-service';
 import { cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { Socket } from 'socket.io';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const usersCol = db.collection('users');
 
-const getCurrentUser = async (userId: string): Promise<UserData | never> => {
+const getUser = async (userId: string): Promise<UserData | never> => {
     try {
         const currentUser = await usersCol.doc(userId).get();
         if (!currentUser.exists) {
             return Promise.reject('User does not exist');
         }
         return parseDBUserData(currentUser.data() as DBUserData);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getMultipleUsers = async (userIds: string[]): Promise<UserData[] | never> => {
+    try {
+        const userDocs = await usersCol.where('id', 'in', userIds).get();
+        if (!userDocs.empty) {
+            const res: UserData[] = [];
+            userDocs.forEach((doc) => {
+                res.push(parseDBUserData(doc.data() as DBUserData));
+            });
+            return res;
+        }
+        return Promise.reject('No results found');
     } catch (err) {
         return Promise.reject(err);
     }
@@ -40,7 +57,7 @@ const createNewUser = async (userId: string, userDetails: UserData): Promise<Use
 // modifying this function so that it no longer touches conversation previews -> all updates to previews should happen on message send/convo creation
 const updateUser = async (userId: string, updatedUserDetails: UserData): Promise<UserData | never> => {
     try {
-        const currUser = await getCurrentUser(userId);
+        const currUser = await getUser(userId);
         const updatedUser: UserData = {
             ...currUser,
             ...updatedUserDetails,
@@ -63,7 +80,7 @@ const updateUser = async (userId: string, updatedUserDetails: UserData): Promise
 const getSocketUser = async (socket: Socket): Promise<UserData | never> => {
     try {
         const userId = socket.data.user.uid;
-        const socketUser: UserData = await getCurrentUser(userId);
+        const socketUser: UserData = await getUser(userId);
         return socketUser;
     } catch (err) {
         return Promise.reject(err);
@@ -120,12 +137,30 @@ const handleReadReceipt = async (uid: string, cid: string) => {
     }
 };
 
+const updatePushNotificationTokens = async (newToken: string, userId: string) => {
+    try {
+        const user = await getUser(userId);
+        if (user.pushTokens && user.pushTokens.includes(newToken)) {
+            return;
+        }
+        const updateRes = await usersCol.doc(userId).update({
+            pushTokens: FieldValue.arrayUnion([newToken])
+        });
+        return updateRes;
+    } catch (err) {
+        console.log(err);
+        return;
+    }
+};
+
 const usersService = {
-    getCurrentUser,
+    getUser,
+    getMultipleUsers,
     createNewUser,
     updateUser,
     getSocketUser,
-    handleReadReceipt
+    handleReadReceipt,
+    updatePushNotificationTokens
 };
 
 export default usersService;

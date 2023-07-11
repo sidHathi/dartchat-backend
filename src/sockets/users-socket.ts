@@ -5,7 +5,7 @@ import { usersService } from '../services';
 const onUserAuth = async (socket: Socket) => {
     try {
         const uid = socket.data.user.uid;
-        const user: UserData = await usersService.getCurrentUser(uid);
+        const user: UserData = await usersService.getUser(uid);
         user.conversations?.map((c: ConversationPreview) => {
             socket.join(c.cid);
         });
