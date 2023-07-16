@@ -51,14 +51,16 @@ const pushNotificationsService: PushNotificationsService = {
                 senderName: sender.displayName,
                 conversationName: convo.name,
                 messageContent: (message.media ? 'Media, ' : '') + message.content,
-                avatar: convo.avatar || sender.avatar || null
+                avatar: JSON.stringify(convo.avatar || sender.avatar)
             };
 
-            const notification = {
-                title: group ? convo.name : sender.displayName,
-                body: `${group && sender.displayName + ': '}${message.media && 'Image + '}${message.content}`,
-                imageUrl: convo.avatar || sender.avatar || undefined
-            };
+            const notification = JSON.parse(
+                JSON.stringify({
+                    title: group ? convo.name : sender.displayName,
+                    body: `${group && sender.displayName + ': '}${message.media && 'Image + '}${message.content}`,
+                    imageUrl: convo.avatar || sender.avatar || undefined
+                })
+            );
 
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
@@ -82,11 +84,13 @@ const pushNotificationsService: PushNotificationsService = {
 
             const data = JSON.parse(JSON.stringify(convo));
             // should only be called for groupchats
-            const notification = {
-                title: 'You were added to a new conversation',
-                body: `${creator.displayName} added you to ${convo.name}`,
-                imageUrl: convo.avatar || creator.avatar || undefined
-            };
+            const notification = JSON.parse(
+                JSON.stringify({
+                    title: 'You were added to a new conversation',
+                    body: `${creator.displayName} added you to ${convo.name}`,
+                    imageUrl: convo.avatar || creator.avatar || undefined
+                })
+            );
 
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
@@ -119,7 +123,7 @@ const pushNotificationsService: PushNotificationsService = {
             const notification = {
                 title: convo.name,
                 body: `${sender.displayName} liked your message`,
-                imageUrl: convo.avatar || undefined
+                imageUrl: JSON.stringify(convo.avatar) || undefined
             };
 
             await admin.messaging().sendEachForMulticast({

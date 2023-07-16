@@ -1,6 +1,6 @@
-import { Conversation, Message, Event } from 'models';
+import { Conversation, Message, Event, UserConversationProfile } from 'models';
 import { Socket } from 'socket.io';
-import { conversationSocket, userSocket } from '../sockets';
+import { messagesSocket, userSocket, conversationsSocket } from '../sockets';
 import pushNotificationsService, { PushNotificationsService } from '../services/pushNotifications-service';
 
 const userSocketMap: { [userId: string]: string } = {};
@@ -22,19 +22,29 @@ const socketsRouter = (socket: Socket) => {
     });
 
     socket.on('newConversation', (newConvo: Conversation) =>
-        conversationSocket.newConversation(socket, newConvo, userSocketMap, pnService)
+        conversationsSocket.newConversation(socket, newConvo, userSocketMap, pnService)
     );
 
-    socket.on('deleteConversation', (cid: string) => conversationSocket.conversationDelete(socket, cid));
+    socket.on('deleteConversation', (cid: string) => conversationsSocket.conversationDelete(socket, cid));
 
     socket.on('newMessage', (cid: string, message: Message) =>
-        conversationSocket.newMessage(socket, cid, message, pnService)
+        messagesSocket.newMessage(socket, cid, message, pnService)
     );
 
     socket.on('messagesRead', (cid: string) => userSocket.onReadReceipt(socket, cid));
 
     socket.on('newLikeEvent', (cid: string, mid: string, event: Event) =>
-        conversationSocket.newLikeEvent(socket, cid, mid, event, pnService)
+        messagesSocket.newLikeEvent(socket, cid, mid, event, pnService)
+    );
+
+    socket.on('updateConversationDetails', (cid: string) => conversationsSocket.newUpdateEvent(socket, cid));
+
+    socket.on('newConversationUsers', (cid: string, profiles: UserConversationProfile[]) =>
+        conversationsSocket.newParticipants(socket, cid, profiles)
+    );
+
+    socket.on('removeConversationUser', (cid: string, uid: string) =>
+        conversationsSocket.removeParticipant(socket, cid, uid)
     );
 
     socket.on('forceDisconnect', () => {

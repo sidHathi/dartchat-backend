@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase-admin/firestore';
+import UserConversationProfile from './UserConversationProfile';
 
 type MessageType = 'plainText' | 'media' | 'ref' | 'system';
 
@@ -14,6 +15,7 @@ type Message = {
     replyRef?: ReplyRef;
     messageType: MessageType;
     encryptionLevel: EncryptionLevel;
+    senderProfile?: UserConversationProfile;
 };
 
 export type RawMessage = {
@@ -26,6 +28,7 @@ export type RawMessage = {
     replyRef?: ReplyRef;
     messageType: MessageType;
     encryptionLevel: EncryptionLevel;
+    senderProfile?: UserConversationProfile;
 };
 
 export type DBMessage = {
@@ -38,6 +41,7 @@ export type DBMessage = {
     replyRef?: ReplyRef;
     messageType: MessageType;
     encryptionLevel: EncryptionLevel;
+    senderProfile?: UserConversationProfile;
 };
 
 type ReplyRef = {

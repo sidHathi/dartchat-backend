@@ -1,5 +1,5 @@
 import { db } from '../firebase';
-import { DBUserData, UserData } from '../models';
+import { DBUserData, UserData, Conversation, ConversationPreview, NotificationStatus } from '../models';
 import profileService from './profiles-service';
 import { cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { Socket } from 'socket.io';
@@ -153,6 +153,63 @@ const updatePushNotificationTokens = async (newToken: string, userId: string) =>
     }
 };
 
+const updatePreviewDetails = async (updatedConvo: Conversation, userId: string) => {
+    try {
+        const relevantUpdates = cleanUndefinedFields({
+            name: updatedConvo.name,
+            avatar: updatedConvo.avatar
+        });
+        const user = await getUser(userId);
+        const matchingPreviews = user.conversations.filter((c) => c.cid === updatedConvo.id);
+        if (matchingPreviews.length > 0) {
+            const preview = matchingPreviews[0];
+            const updatedPreview: ConversationPreview = {
+                ...preview,
+                ...relevantUpdates
+            };
+            const res = await usersCol.doc(userId).update({
+                conversations: [updatedPreview, ...user.conversations.filter((c) => c.cid !== updatedConvo.id)]
+            });
+            return res;
+        }
+        return Promise.reject('no such preview');
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const handleLeaveConversation = async (cid: string, userId: string) => {
+    try {
+        const user = await getUser(userId);
+        const filteredConvos = user.conversations.filter((c) => c.cid !== cid);
+        const res = usersCol.doc(userId).update({
+            conversations: filteredConvos
+        });
+        return res;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const handleConversationAdd = async (convo: Conversation, userId: string) => {
+    try {
+        const user = await getUser(userId);
+        const previews = user.conversations;
+        const newPreview = {
+            cid: convo.id,
+            name: convo.name,
+            unSeenMesages: 0,
+            avatar: convo.avatar,
+            lastMessageTime: new Date()
+        };
+        usersCol.doc(userId).update({
+            conversations: [newPreview, ...previews]
+        });
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -160,7 +217,10 @@ const usersService = {
     updateUser,
     getSocketUser,
     handleReadReceipt,
-    updatePushNotificationTokens
+    updatePushNotificationTokens,
+    updatePreviewDetails,
+    handleLeaveConversation,
+    handleConversationAdd
 };
 
 export default usersService;

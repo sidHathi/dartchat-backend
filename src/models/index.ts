@@ -5,6 +5,7 @@ import UserData, { DBUserData } from './UserData';
 import UserProfile from './UserProfile';
 import Event from './Event';
 import AvatarImage from './AvatarImage';
+import UserConversationProfile, { NotificationStatus } from './UserConversationProfile';
 
 export {
     Conversation,
@@ -17,5 +18,7 @@ export {
     RawMessage,
     DBConversationPreview,
     DBUserData,
-    AvatarImage
+    AvatarImage,
+    UserConversationProfile,
+    NotificationStatus
 };

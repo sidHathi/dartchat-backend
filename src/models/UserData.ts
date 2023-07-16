@@ -3,7 +3,7 @@ import UserProfile from './UserProfile';
 import AvatarImage from './AvatarImage';
 
 export type DBUserData = {
-    id?: string;
+    id: string;
     handle: string;
     email: string;
     displayName?: string;
@@ -17,7 +17,7 @@ export type DBUserData = {
 };
 
 type UserData = {
-    id?: string;
+    id: string;
     handle: string;
     email: string;
     displayName?: string;

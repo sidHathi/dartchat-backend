@@ -1,7 +1,6 @@
 import { Socket } from 'socket.io';
-import { Conversation, Message, Event } from '../models';
-import { conversationsService } from '../services';
-import { PushNotificationsService } from 'services/pushNotifications-service';
+import { Conversation, UserConversationProfile } from '../models';
+import { conversationsService, messagesService, PushNotificationsService } from '../services';
 
 const newConversation = async (
     socket: Socket,
@@ -16,9 +15,9 @@ const newConversation = async (
         if (await conversationsService.conversationExists(newConvo.id)) {
             return newConvo;
         }
-        const seedMessage = await conversationsService.generateConversationInitMessage(newConvo, user.uid);
+        const seedMessage = await messagesService.generateConversationInitMessage(newConvo, user.uid);
         await conversationsService.createNewConversation(newConvo);
-        await conversationsService.storeNewMessage(newConvo.id, seedMessage);
+        await messagesService.storeNewMessage(newConvo.id, seedMessage);
         const onlineUsers: string[] = Object.keys(userSocketMap)
             .filter((uid) => {
                 return uid !== user.uid;
@@ -41,24 +40,6 @@ const newConversation = async (
     }
 };
 
-const newMessage = async (socket: Socket, cid: string, message: Message, pnService?: PushNotificationsService) => {
-    console.log('new message received');
-    // send the message to the appropriate room and store it in the conversation
-    try {
-        console.log('sending to room: ' + cid);
-        console.log(message);
-        await conversationsService.storeNewMessage(cid, message);
-        socket.to(cid).emit('newMessage', cid, message);
-        if (pnService) {
-            await pnService.pushMessage(cid, message);
-        }
-        return message;
-    } catch (err) {
-        console.log(err);
-        return Promise.reject(err);
-    }
-};
-
 const conversationDelete = async (socket: Socket, cid: string) => {
     try {
         const user = socket.data.user;
@@ -70,32 +51,26 @@ const conversationDelete = async (socket: Socket, cid: string) => {
     }
 };
 
-const newLikeEvent = async (
-    socket: Socket,
-    cid: string,
-    mid: string,
-    event: Event,
-    pnService?: PushNotificationsService
-) => {
-    try {
-        const uid = socket.data.user.uid;
-        socket.to(cid).emit('newLikeEvent', cid, mid, uid, event);
-        console.log('new like sent');
-        const message = await conversationsService.storeNewLike(cid, mid, uid, event.type);
-        if (pnService) {
-            await pnService.pushLike(cid, message, uid, event);
-        }
-        return true;
-    } catch (err) {
-        return Promise.reject(err);
-    }
+const newUpdateEvent = async (socket: Socket, cid: string) => {
+    socket.to(cid).emit('updateConversationDetails');
 };
 
-const conversationSocket = {
+const newParticipants = async (socket: Socket, cid: string, profiles: UserConversationProfile[]) => {
+    // handle logic through http requests so permissions can be taken into account and error messages sent back if necessary
+    socket.to(cid).emit('newConversationUsers', cid, profiles);
+};
+
+const removeParticipant = async (socket: Socket, cid: string, uid: string) => {
+    // see above comment
+    socket.to(cid).emit('removeConversationUser', cid, uid);
+};
+
+const conversationsSocket = {
     newConversation,
-    newMessage,
     conversationDelete,
-    newLikeEvent
+    newUpdateEvent,
+    newParticipants,
+    removeParticipant
 };
 
-export default conversationSocket;
+export default conversationsSocket;

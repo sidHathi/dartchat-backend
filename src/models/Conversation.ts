@@ -1,13 +1,15 @@
+import AvatarImage from './AvatarImage';
 import Message from './Message';
-import UserProfile from './UserProfile';
+import UserConversationProfile from './UserConversationProfile';
 
 type Conversation = {
     id: string;
     name: string;
-    avatar?: any;
+    avatar?: AvatarImage;
     settings: any;
     messages: Message[];
-    participants: UserProfile[];
+    group: boolean;
+    participants: UserConversationProfile[];
 };
 
 export default Conversation;

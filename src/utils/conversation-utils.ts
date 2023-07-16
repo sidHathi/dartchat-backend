@@ -1,4 +1,4 @@
-import { AvatarImage, Conversation } from 'models';
+import { AvatarImage, Conversation, UserConversationProfile, UserData } from 'models';
 import { cleanUndefinedFields } from './request-utils';
 
 export const cleanConversation = (convo: Conversation): Conversation => {
@@ -21,4 +21,14 @@ export const getUserConversationAvatar = (convo: Conversation, userId: string): 
         return otherUsers[0].avatar;
     }
     return undefined;
+};
+
+export const getProfileForUser = (user: UserData, displayName?: string): UserConversationProfile => {
+    return {
+        id: user.id,
+        handle: user.handle,
+        displayName: displayName || user.displayName || user.handle,
+        avatar: user.avatar,
+        notifications: 'all'
+    };
 };
