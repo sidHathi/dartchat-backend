@@ -55,9 +55,19 @@ const newUpdateEvent = async (socket: Socket, cid: string) => {
     socket.to(cid).emit('updateConversationDetails');
 };
 
-const newParticipants = async (socket: Socket, cid: string, profiles: UserConversationProfile[]) => {
+const newParticipants = async (
+    socket: Socket,
+    cid: string,
+    profiles: UserConversationProfile[],
+    userSocketMap: { [userId: string]: string }
+) => {
     // handle logic through http requests so permissions can be taken into account and error messages sent back if necessary
     socket.to(cid).emit('newConversationUsers', cid, profiles);
+    profiles.map((p) => {
+        if (p.id in userSocketMap) {
+            socket.broadcast.to(userSocketMap[p.id]).emit('newConversationUsers', cid, []);
+        }
+    });
 };
 
 const removeParticipant = async (socket: Socket, cid: string, uid: string) => {

@@ -40,7 +40,7 @@ const socketsRouter = (socket: Socket) => {
     socket.on('updateConversationDetails', (cid: string) => conversationsSocket.newUpdateEvent(socket, cid));
 
     socket.on('newConversationUsers', (cid: string, profiles: UserConversationProfile[]) =>
-        conversationsSocket.newParticipants(socket, cid, profiles)
+        conversationsSocket.newParticipants(socket, cid, profiles, userSocketMap)
     );
 
     socket.on('removeConversationUser', (cid: string, uid: string) =>
