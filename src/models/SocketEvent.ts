@@ -1,8 +1,8 @@
-type Event = {
+type SocketEvent = {
     id: string;
     timestamp: Date;
     type: string;
     metadata?: any;
 };
 
-export default Event;
+export default SocketEvent;

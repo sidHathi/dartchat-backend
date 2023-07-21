@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { Message, Event } from '../models';
+import { Message, SocketEvent } from '../models';
 import { messagesService } from '../services';
 import { PushNotificationsService } from 'services/pushNotifications-service';
 
@@ -25,7 +25,7 @@ const newLikeEvent = async (
     socket: Socket,
     cid: string,
     mid: string,
-    event: Event,
+    event: SocketEvent,
     pnService?: PushNotificationsService
 ) => {
     try {

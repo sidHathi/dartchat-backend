@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { Conversation, UserConversationProfile } from '../models';
+import { Conversation, UserConversationProfile, Message } from '../models';
 import { conversationsService, messagesService, PushNotificationsService } from '../services';
 
 const newConversation = async (
@@ -20,7 +20,7 @@ const newConversation = async (
         await messagesService.storeNewMessage(newConvo.id, seedMessage);
         const onlineUsers: string[] = Object.keys(userSocketMap)
             .filter((uid) => {
-                return uid !== user.uid;
+                return uid !== user.uid && uid in newConvo.participants.map((p) => p.id);
             })
             .map((uid) => userSocketMap[uid]);
         onlineUsers.forEach((usid) => {
@@ -32,6 +32,34 @@ const newConversation = async (
         socket.emit('conversationReceived', newConvo);
         if (pnService) {
             await pnService.pushNewConvo(newConvo, user.uid);
+        }
+        return newConvo;
+    } catch (err) {
+        console.log(err);
+        return null;
+    }
+};
+
+const newPrivateMessage = async (
+    socket: Socket,
+    seedConvo: Conversation,
+    userSocketMap: { [userId: string]: string },
+    firstMessage: Message,
+    pnService?: PushNotificationsService
+) => {
+    try {
+        const newConvo = await newConversation(socket, seedConvo, userSocketMap, pnService);
+        if (newConvo) {
+            socket.emit('newConversation', newConvo);
+            await messagesService.storeNewMessage(newConvo.id, {
+                ...firstMessage,
+                timestamp: new Date()
+            });
+            socket.to(newConvo.id).emit('newMessage', newConvo.id, firstMessage);
+            socket.emit('newMessage', newConvo.id, firstMessage);
+            if (pnService) {
+                await pnService.pushMessage(newConvo.id, firstMessage);
+            }
         }
         return newConvo;
     } catch (err) {
@@ -75,12 +103,31 @@ const removeParticipant = async (socket: Socket, cid: string, uid: string) => {
     socket.to(cid).emit('removeConversationUser', cid, uid);
 };
 
+const handlePollResponse = async (
+    socket: Socket,
+    cid: string,
+    uid: string,
+    pid: string,
+    selectedOptionIndices: number[]
+) => {
+    try {
+        const updateRes = await conversationsService.recordPollResponse(cid, uid, pid, selectedOptionIndices);
+        if (updateRes) {
+            socket.to(cid).emit('pollResponse', cid, uid, pid, selectedOptionIndices);
+        }
+    } catch (err) {
+        console.log(err);
+    }
+};
+
 const conversationsSocket = {
     newConversation,
+    newPrivateMessage,
     conversationDelete,
     newUpdateEvent,
     newParticipants,
-    removeParticipant
+    removeParticipant,
+    handlePollResponse
 };
 
 export default conversationsSocket;

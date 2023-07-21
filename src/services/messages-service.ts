@@ -145,6 +145,39 @@ const storeNewLike = async (cid: string, mid: string, uid: string, type: string)
     }
 };
 
+const recordPollResponse = async (convo: Conversation, uid: string, pid: string, selectedOptionIndices: number[]) => {
+    try {
+        if (!convo.polls) return Promise.reject('no such poll');
+
+        const updatedPolls = convo.polls.map((poll) => {
+            if (poll.id === pid) {
+                return {
+                    ...poll,
+                    options: poll.options.map((opt) => {
+                        if (selectedOptionIndices.includes(opt.idx)) {
+                            return {
+                                ...opt,
+                                voters: [...opt.voters, uid]
+                            };
+                        }
+                        return opt;
+                    })
+                };
+            }
+            return poll;
+        });
+        const updateRes = await conversationsCol.doc(convo.id).update({
+            polls: updatedPolls
+        });
+        if (updateRes) {
+            return updateRes;
+        }
+        return Promise.reject('update failed');
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const messagesService = {
     generateConversationInitMessage,
     handleUserConversationMessage,
@@ -152,7 +185,8 @@ const messagesService = {
     getConversationMessages,
     getConversationMessagesToDate,
     getConversationMessage,
-    storeNewLike
+    storeNewLike,
+    recordPollResponse
 };
 
 export default messagesService;

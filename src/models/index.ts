@@ -3,9 +3,10 @@ import ConversationPreview, { DBConversationPreview } from './ConversationPrevie
 import Message, { DBMessage, RawMessage } from './Message';
 import UserData, { DBUserData } from './UserData';
 import UserProfile from './UserProfile';
-import Event from './Event';
+import SocketEvent from './SocketEvent';
 import AvatarImage from './AvatarImage';
 import UserConversationProfile, { NotificationStatus } from './UserConversationProfile';
+import { Poll, Event } from './MessageObjects';
 
 export {
     Conversation,
@@ -13,12 +14,14 @@ export {
     Message,
     UserData,
     UserProfile,
-    Event,
+    SocketEvent,
     DBMessage,
     RawMessage,
     DBConversationPreview,
     DBUserData,
     AvatarImage,
     UserConversationProfile,
-    NotificationStatus
+    NotificationStatus,
+    Poll,
+    Event
 };

@@ -1,6 +1,6 @@
 import usersService from './users-service';
 import conversationsService from './conversations-service';
-import { Conversation, Message, UserData, Event } from 'models';
+import { Conversation, Message, UserData, SocketEvent } from '../models';
 import admin from '../firebase';
 
 export type PushNotificationsService = {
@@ -9,7 +9,7 @@ export type PushNotificationsService = {
     getRecipientTokens: (userIds: string[]) => Promise<string[]>;
     pushMessage: (cid: string, message: Message) => Promise<void>;
     pushNewConvo: (convo: Conversation, userId: string) => Promise<void>;
-    pushLike: (cid: string, message: Message, userId: string, event: Event) => Promise<void>;
+    pushLike: (cid: string, message: Message, userId: string, event: SocketEvent) => Promise<void>;
     pushMention: (cid: string, mid: string) => Promise<void>;
 };
 
@@ -102,7 +102,7 @@ const pushNotificationsService: PushNotificationsService = {
             return;
         }
     },
-    pushLike: async function (cid: string, message: Message, userId: string, event: Event) {
+    pushLike: async function (cid: string, message: Message, userId: string, event: SocketEvent) {
         if (!this.handledEvents || this.handledEvents.has(event.id)) return;
         this.handledEvents.add(event.id);
         if (event.type !== 'newLike') return;

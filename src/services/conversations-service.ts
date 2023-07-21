@@ -8,7 +8,8 @@ import {
     DBMessage,
     AvatarImage,
     UserConversationProfile,
-    NotificationStatus
+    NotificationStatus,
+    Poll
 } from '../models';
 import { cleanUndefinedFields } from '../utils/request-utils';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -16,6 +17,7 @@ import usersService from './users-service';
 import { MessageCursor, getQueryForCursor } from '../pagination';
 import { parseDBMessage } from '../utils/request-utils';
 import { cleanConversation, getUserConversationAvatar } from '../utils/conversation-utils';
+import messagesService from './messages-service';
 
 const usersCol = db.collection('users');
 const conversationsCol = db.collection('conversations');
@@ -51,9 +53,9 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
                 avatar: getUserConversationAvatar(newConversation, participant.id)
             };
             if (!newConversation.group) {
-                preview.name = newConversation.participants.filter((p) => p.id !== participant.id)[0].displayName;
-                console.log(preview);
-                console.log(participant);
+                const otherParticipant = newConversation.participants.filter((p) => p.id !== participant.id)[0];
+                preview.name = otherParticipant.displayName;
+                preview.recipientId = otherParticipant.id;
             } else {
                 preview.name = newConversation.name;
             }
@@ -250,6 +252,47 @@ const removeUser = async (cid: string, uid: string) => {
     }
 };
 
+const addPoll = async (cid: string, poll: Poll) => {
+    try {
+        const res = await conversationsCol.doc(cid).update({
+            polls: FieldValue.arrayUnion(poll)
+        });
+        if (res) return res;
+        return Promise.reject('update failed');
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const recordPollResponse = async (cid: string, uid: string, pid: string, selectedOptionIndices: number[]) => {
+    try {
+        const convo = await getConversationInfo(cid);
+        const updateRes = await messagesService.recordPollResponse(convo, uid, pid, selectedOptionIndices);
+        if (updateRes) {
+            return updateRes;
+        }
+        return Promise.reject('update failed');
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getPoll = async (cid: string, pid: string) => {
+    try {
+        const convo = await getConversationInfo(cid);
+        if (convo.polls) {
+            const matches = convo.polls.filter((poll) => poll.id === pid);
+            if (matches.length > 0) {
+                return matches[0];
+            }
+        }
+        return Promise.reject('poll not found');
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+};
+
 const conversationsService = {
     createNewConversation,
     getConversationInfo,
@@ -262,7 +305,10 @@ const conversationsService = {
     updateConversationPreviews,
     updateUserNotStatus,
     addUsers,
-    removeUser
+    removeUser,
+    addPoll,
+    recordPollResponse,
+    getPoll
 };
 
 export default conversationsService;

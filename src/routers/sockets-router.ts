@@ -1,4 +1,4 @@
-import { Conversation, Message, Event, UserConversationProfile } from 'models';
+import { Conversation, Message, SocketEvent, UserConversationProfile } from '../models';
 import { Socket } from 'socket.io';
 import { messagesSocket, userSocket, conversationsSocket } from '../sockets';
 import pushNotificationsService, { PushNotificationsService } from '../services/pushNotifications-service';
@@ -25,6 +25,10 @@ const socketsRouter = (socket: Socket) => {
         conversationsSocket.newConversation(socket, newConvo, userSocketMap, pnService)
     );
 
+    socket.on('newPrivateMessage', (seedConvo: Conversation, message: Message) =>
+        conversationsSocket.newPrivateMessage(socket, seedConvo, userSocketMap, message, pnService)
+    );
+
     socket.on('deleteConversation', (cid: string) => conversationsSocket.conversationDelete(socket, cid));
 
     socket.on('newMessage', (cid: string, message: Message) =>
@@ -33,7 +37,7 @@ const socketsRouter = (socket: Socket) => {
 
     socket.on('messagesRead', (cid: string) => userSocket.onReadReceipt(socket, cid));
 
-    socket.on('newLikeEvent', (cid: string, mid: string, event: Event) =>
+    socket.on('newLikeEvent', (cid: string, mid: string, event: SocketEvent) =>
         messagesSocket.newLikeEvent(socket, cid, mid, event, pnService)
     );
 
@@ -45,6 +49,10 @@ const socketsRouter = (socket: Socket) => {
 
     socket.on('removeConversationUser', (cid: string, uid: string) =>
         conversationsSocket.removeParticipant(socket, cid, uid)
+    );
+
+    socket.on('pollResponse', (cid: string, uid: string, pid: string, selectedOptionIndices: number[]) =>
+        conversationsSocket.handlePollResponse(socket, cid, uid, pid, selectedOptionIndices)
     );
 
     socket.on('forceDisconnect', () => {

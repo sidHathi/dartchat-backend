@@ -8,6 +8,7 @@ export type DBConversationPreview = {
     unSeenMessages: number;
     avatar?: AvatarImage;
     lastMessageTime: Timestamp;
+    recipientId?: string;
 };
 
 type ConversationPreview = {
@@ -17,6 +18,7 @@ type ConversationPreview = {
     unSeenMessages: number;
     avatar?: AvatarImage;
     lastMessageTime: Date;
+    recipientId?: string;
 };
 
 export default ConversationPreview;
