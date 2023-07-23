@@ -6,7 +6,7 @@ import UserProfile from './UserProfile';
 import SocketEvent from './SocketEvent';
 import AvatarImage from './AvatarImage';
 import UserConversationProfile, { NotificationStatus } from './UserConversationProfile';
-import { Poll, Event } from './MessageObjects';
+import { Poll, CalendarEvent } from './MessageObjects';
 
 export {
     Conversation,
@@ -23,5 +23,5 @@ export {
     UserConversationProfile,
     NotificationStatus,
     Poll,
-    Event
+    CalendarEvent
 };

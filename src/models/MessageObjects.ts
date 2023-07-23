@@ -14,10 +14,13 @@ export type Poll = {
     messageId?: string;
 };
 
-export type Event = {
+export type CalendarEvent = {
     id: string;
     name: string;
     date: Date;
+    reminders: Date[];
+    going: string[];
+    notGoing: string[];
 };
 
 export type ObjectRef = {

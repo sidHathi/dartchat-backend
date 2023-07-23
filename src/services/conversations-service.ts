@@ -9,7 +9,8 @@ import {
     AvatarImage,
     UserConversationProfile,
     NotificationStatus,
-    Poll
+    Poll,
+    CalendarEvent
 } from '../models';
 import { cleanUndefinedFields } from '../utils/request-utils';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -293,6 +294,40 @@ const getPoll = async (cid: string, pid: string) => {
     }
 };
 
+const addEvent = async (cid: string, event: CalendarEvent) => {
+    try {
+        const res = await conversationsCol.doc(cid).update({
+            events: FieldValue.arrayUnion(event)
+        });
+        if (res) return res;
+        return Promise.reject('update failed');
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const recordEventRsvp = async (cid: string, eid: string, uid: string, response: string) => {
+    try {
+        const convo = await getConversationInfo(cid);
+        const updateRes = await messagesService.recordEventRsvp(convo, eid, uid, response);
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getEvent = async (cid: string, eid: string) => {
+    try {
+        const convo = await getConversationInfo(cid);
+        if (!convo.events) return Promise.reject('no such event');
+        const matches = convo.events.filter((e) => e.id === eid);
+        if (matches.length < 1) return Promise.reject('no such event');
+        return matches[0];
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const conversationsService = {
     createNewConversation,
     getConversationInfo,
@@ -308,7 +343,10 @@ const conversationsService = {
     removeUser,
     addPoll,
     recordPollResponse,
-    getPoll
+    getPoll,
+    addEvent,
+    recordEventRsvp,
+    getEvent
 };
 
 export default conversationsService;

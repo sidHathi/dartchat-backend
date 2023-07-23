@@ -1,7 +1,7 @@
 import AvatarImage from './AvatarImage';
 import Message from './Message';
 import UserConversationProfile from './UserConversationProfile';
-import { Poll, Event } from './MessageObjects';
+import { Poll, CalendarEvent } from './MessageObjects';
 
 type Conversation = {
     id: string;
@@ -12,7 +12,7 @@ type Conversation = {
     group: boolean;
     participants: UserConversationProfile[];
     polls?: Poll[];
-    events?: Event[];
+    events?: CalendarEvent[];
 };
 
 export default Conversation;

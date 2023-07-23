@@ -51,8 +51,12 @@ const socketsRouter = (socket: Socket) => {
         conversationsSocket.removeParticipant(socket, cid, uid)
     );
 
-    socket.on('pollResponse', (cid: string, uid: string, pid: string, selectedOptionIndices: number[]) =>
-        conversationsSocket.handlePollResponse(socket, cid, uid, pid, selectedOptionIndices)
+    socket.on('pollResponse', (cid: string, pid: string, selectedOptionIndices: number[]) =>
+        conversationsSocket.handlePollResponse(socket, cid, pid, selectedOptionIndices)
+    );
+
+    socket.on('eventRsvp', (cid: string, eid: string, response: string) =>
+        conversationsSocket.handleEventRsvp(socket, cid, eid, response)
     );
 
     socket.on('forceDisconnect', () => {

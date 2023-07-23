@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { conversationsService, messagesService, usersService } from '../services';
-import { Conversation, Message, Poll, UserConversationProfile, UserProfile } from '../models';
+import { CalendarEvent, Conversation, Message, Poll, UserConversationProfile, UserProfile } from '../models';
 import { MessageCursor, encodeCursor, getNextCursor, getCursorForQuery } from '../pagination';
 import { getErrorMessage } from '../utils/request-utils';
 import { cleanConversation, getProfileForUser } from '../utils/conversation-utils';
@@ -253,6 +253,52 @@ const getPoll: RequestHandler = async (req, res, next) => {
     }
 };
 
+const addEvent: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const event = req.body as CalendarEvent;
+        const updateRes = await conversationsService.addEvent(cid, event);
+        if (updateRes) {
+            res.status(200).send(updateRes);
+            return;
+        }
+        res.status(400).send('server update failed');
+    } catch (err) {
+        next(err);
+    }
+};
+
+const recordEventRsvp: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const uid = res.locals.uid;
+        const { eid, response } = req.body;
+        const updateRes = await conversationsService.recordEventRsvp(cid, eid, uid, response);
+        if (updateRes) {
+            res.status(200).send(updateRes);
+            return;
+        }
+        res.status(400).send('server update failed');
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getEvent: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.cid;
+        const eid = req.params.eid;
+        const event = await conversationsService.getEvent(cid, eid);
+        if (event) {
+            res.status(200).send(event);
+            return;
+        }
+        res.status(404).send('no matching poll found');
+    } catch (err) {
+        next(err);
+    }
+};
+
 const conversationsController = {
     getConversation,
     getConversationInfo,
@@ -269,7 +315,10 @@ const conversationsController = {
     leaveConvo,
     recordPollResponse,
     addPoll,
-    getPoll
+    getPoll,
+    addEvent,
+    recordEventRsvp,
+    getEvent
 };
 
 export default conversationsController;

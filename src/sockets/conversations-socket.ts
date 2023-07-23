@@ -103,17 +103,25 @@ const removeParticipant = async (socket: Socket, cid: string, uid: string) => {
     socket.to(cid).emit('removeConversationUser', cid, uid);
 };
 
-const handlePollResponse = async (
-    socket: Socket,
-    cid: string,
-    uid: string,
-    pid: string,
-    selectedOptionIndices: number[]
-) => {
+const handlePollResponse = async (socket: Socket, cid: string, pid: string, selectedOptionIndices: number[]) => {
     try {
+        const uid = socket.data.user.uid;
+        console.log(uid);
         const updateRes = await conversationsService.recordPollResponse(cid, uid, pid, selectedOptionIndices);
         if (updateRes) {
             socket.to(cid).emit('pollResponse', cid, uid, pid, selectedOptionIndices);
+        }
+    } catch (err) {
+        console.log(err);
+    }
+};
+
+const handleEventRsvp = async (socket: Socket, cid: string, eid: string, response: string) => {
+    try {
+        const uid = socket.data.user.uid;
+        const updateRes = await conversationsService.recordEventRsvp(cid, eid, uid, response);
+        if (updateRes) {
+            socket.to(cid).emit('eventRsvp', cid, eid, uid, response);
         }
     } catch (err) {
         console.log(err);
@@ -127,7 +135,8 @@ const conversationsSocket = {
     newUpdateEvent,
     newParticipants,
     removeParticipant,
-    handlePollResponse
+    handlePollResponse,
+    handleEventRsvp
 };
 
 export default conversationsSocket;

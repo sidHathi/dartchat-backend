@@ -18,5 +18,7 @@ conversationsRouter.route('/:id/join').put(conversationsController.joinConvo);
 conversationsRouter.route('/:id/leave').put(conversationsController.leaveConvo);
 conversationsRouter.route('/:id/addPoll').post(conversationsController.addPoll);
 conversationsRouter.route('/:cid/polls/:pid').get(conversationsController.getPoll);
+conversationsRouter.route('/:id/addEvent').post(conversationsController.addEvent);
+conversationsRouter.route('/:cid/events/:eid').get(conversationsController.getEvent);
 
 export default conversationsRouter;

@@ -178,6 +178,45 @@ const recordPollResponse = async (convo: Conversation, uid: string, pid: string,
     }
 };
 
+const recordEventRsvp = async (convo: Conversation, eid: string, uid: string, response: string) => {
+    try {
+        if (!convo.events) return Promise.reject('no such event');
+        const newEventsArr = convo.events.map((e) => {
+            if (e.id === eid) {
+                const clearedEvent = {
+                    ...e,
+                    notGoing: e.notGoing.filter((p) => p !== uid),
+                    going: e.going.filter((p) => p !== uid)
+                };
+                if (response === 'going') {
+                    if (e.going.includes(uid)) return clearedEvent;
+                    return {
+                        ...e,
+                        going: [...e.going.filter((p) => p !== uid), uid],
+                        notGoing: e.notGoing.filter((p) => p !== uid)
+                    };
+                } else if (response === 'notGoing') {
+                    if (e.notGoing.includes(uid)) return clearedEvent;
+                    return {
+                        ...e,
+                        notGoing: [...e.notGoing.filter((p) => p !== uid), uid],
+                        going: e.going.filter((p) => p !== uid)
+                    };
+                } else {
+                    return clearedEvent;
+                }
+            }
+            return e;
+        });
+        const updateRes = await conversationsCol.doc(convo.id).update({
+            events: newEventsArr
+        });
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const messagesService = {
     generateConversationInitMessage,
     handleUserConversationMessage,
@@ -186,7 +225,8 @@ const messagesService = {
     getConversationMessagesToDate,
     getConversationMessage,
     storeNewLike,
-    recordPollResponse
+    recordPollResponse,
+    recordEventRsvp
 };
 
 export default messagesService;
