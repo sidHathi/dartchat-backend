@@ -21,6 +21,7 @@ const getUser = async (userId: string): Promise<UserData | never> => {
 
 const getMultipleUsers = async (userIds: string[]): Promise<UserData[] | never> => {
     try {
+        if (userIds.length < 1) return Promise.reject('invalid input');
         const userDocs = await usersCol.where('id', 'in', userIds).get();
         if (!userDocs.empty) {
             const res: UserData[] = [];
@@ -210,6 +211,68 @@ const handleConversationAdd = async (convo: Conversation, userId: string) => {
     }
 };
 
+const addIdToContacts = async (contactId: string, uid: string) => {
+    try {
+        const currUser = await getUser(uid);
+        if (currUser.contacts && currUser.contacts.includes(contactId)) {
+            return;
+        }
+        const updateRes = await usersCol.doc(uid).update({
+            contacts: FieldValue.arrayUnion(contactId)
+        });
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const addIdArrToContacts = async (newContactIds: string[], uid: string) => {
+    try {
+        const currUser = await getUser(uid);
+        let filteredNewContactIds = newContactIds.filter((c) => c !== uid);
+        if (currUser.contacts) {
+            filteredNewContactIds = newContactIds.filter((c) => c !== uid && !currUser.contacts?.includes(c));
+        }
+        if (filteredNewContactIds.length > 0) {
+            const updateRes = await usersCol.doc(uid).update({
+                contacts: FieldValue.arrayUnion(...filteredNewContactIds)
+            });
+            return updateRes;
+        }
+        return undefined;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const addConvoToArchive = async (convoId: string, uid: string) => {
+    try {
+        const currUser = await getUser(uid);
+        if (currUser.archivedConvos && currUser.archivedConvos.includes(convoId)) return;
+        const updateRes = await usersCol.doc(uid).update({
+            archivedConvos: FieldValue.arrayUnion(convoId)
+        });
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const removeConvoFromArchive = async (convoId: string, uid: string) => {
+    try {
+        const currUser = await getUser(uid);
+        if (currUser.archivedConvos && currUser.archivedConvos.includes(convoId)) {
+            const updateRes = await usersCol.doc(uid).update({
+                archivedConvos: currUser.archivedConvos.filter((c) => c !== convoId)
+            });
+            return updateRes;
+        }
+        return undefined;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -220,7 +283,11 @@ const usersService = {
     updatePushNotificationTokens,
     updatePreviewDetails,
     handleLeaveConversation,
-    handleConversationAdd
+    handleConversationAdd,
+    addIdToContacts,
+    addConvoToArchive,
+    addIdArrToContacts,
+    removeConvoFromArchive
 };
 
 export default usersService;

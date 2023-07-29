@@ -1,7 +1,7 @@
 import { db } from '../firebase';
 import { UserData, UserProfile } from '../models';
 import { cleanUndefinedFields } from '../utils/request-utils';
-import { Filter } from 'firebase-admin/firestore';
+import { FieldPath, Filter } from 'firebase-admin/firestore';
 
 const profileCol = db.collection('profiles');
 
@@ -73,11 +73,24 @@ const profileSearch = async (qString: string) => {
     }
 };
 
+const getProfiles = async (ids: string[]) => {
+    try {
+        if (ids.length < 1) return undefined;
+        const profileDocs = await profileCol.where('id', 'in', ids).get();
+        const profiles: UserProfile[] = [];
+        profileDocs.forEach((doc) => profiles.push(doc.data() as UserProfile));
+        return profiles;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const profileService = {
     createNewProfile,
     updateProfile,
     getProfile,
-    profileSearch
+    profileSearch,
+    getProfiles
 };
 
 export default profileService;

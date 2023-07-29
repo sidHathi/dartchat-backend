@@ -30,9 +30,24 @@ const getProfile: RequestHandler = async (req, res, next) => {
     }
 };
 
+const getProfiles: RequestHandler = async (req, res, next) => {
+    try {
+        const ids = req.body as string[];
+        if (!ids) {
+            res.status(404).send();
+            return;
+        }
+        const profiles = await profileService.getProfiles(ids);
+        res.status(200).send(profiles);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const profilesController = {
     findProfile,
-    getProfile
+    getProfile,
+    getProfiles
 };
 
 export default profilesController;

@@ -27,3 +27,11 @@ export type ObjectRef = {
     type: string;
     id: string;
 };
+
+export type LikeIcon = {
+    type: 'none' | 'icon' | 'img';
+    emptyImageUri?: string;
+    partialImageUri?: string;
+    activeImageUri?: string;
+    iconName?: string;
+};

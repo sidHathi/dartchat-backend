@@ -11,9 +11,10 @@ export type DBUserData = {
     // implement later!!;
     avatar?: AvatarImage;
     conversations: DBConversationPreview[];
-    contacts: UserProfile[];
+    contacts?: string[];
     privateEncryptionKey?: string;
     pushTokens?: string[];
+    archivedConvos?: string[];
 };
 
 type UserData = {
@@ -25,9 +26,10 @@ type UserData = {
     // implement later!!;
     avatar?: AvatarImage;
     conversations: ConversationPreview[];
-    contacts: UserProfile[];
+    contacts?: string[];
     privateEncryptionKey?: string;
     pushTokens?: string[];
+    archivedConvos?: string[];
 };
 
 export default UserData;

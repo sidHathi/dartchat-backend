@@ -38,7 +38,7 @@ export const decodeCursor = (cursor: string): MessageCursor => {
     ) as MessageCursor;
 };
 
-export const getQueryForCursor = (document: DocumentData, cursor: MessageCursor): Query => {
+export const getQueryForCursor = (document: DocumentData | Query, cursor: MessageCursor): Query => {
     if (cursor.prevLastVal) {
         return document.where('timestamp', '<', cursor.prevLastVal).orderBy('timestamp', 'desc').limit(cursor.size);
     }

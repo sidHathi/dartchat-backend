@@ -20,5 +20,9 @@ conversationsRouter.route('/:id/addPoll').post(conversationsController.addPoll);
 conversationsRouter.route('/:cid/polls/:pid').get(conversationsController.getPoll);
 conversationsRouter.route('/:id/addEvent').post(conversationsController.addEvent);
 conversationsRouter.route('/:cid/events/:eid').get(conversationsController.getEvent);
+conversationsRouter.route('/:cid/likeIcon/reset').put(conversationsController.resetLikeIcon);
+conversationsRouter.route('/:cid/likeIcon').put(conversationsController.changeLikeIcon);
+conversationsRouter.route('/:id/gallery').get(conversationsController.getGalleryMessages);
+conversationsRouter.route('/forIds').post(conversationsController.getConversationsInfo);
 
 export default conversationsRouter;

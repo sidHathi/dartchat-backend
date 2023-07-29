@@ -1,18 +1,29 @@
-import { Conversation, Message, SocketEvent, UserConversationProfile } from '../models';
-import { Socket } from 'socket.io';
+import { CalendarEvent, Conversation, Message, Poll, SocketEvent, UserConversationProfile } from '../models';
+import { Server, Socket } from 'socket.io';
 import { messagesSocket, userSocket, conversationsSocket } from '../sockets';
-import pushNotificationsService, { PushNotificationsService } from '../services/pushNotifications-service';
+import {
+    pushNotificationsService,
+    PushNotificationsService,
+    ScheduledMessagesService,
+    scheduledMessagesService
+} from '../services';
+import { parseCalEvent, parsePoll } from '../utils/request-utils';
 
 const userSocketMap: { [userId: string]: string } = {};
 const pnService: PushNotificationsService = pushNotificationsService.init();
+const scmService: ScheduledMessagesService = scheduledMessagesService.init(null, pnService);
 
-const socketsRouter = (socket: Socket) => {
-    socket.emit('connected');
+const socketsRouter = (socket: Socket, server: Server) => {
     console.log(`a user connected with id ${socket.id}`);
     userSocketMap[socket.data.user.uid] = socket.id;
     console.log(userSocketMap);
     userSocket.onUserAuth(socket);
-    socket.on('ping', () => {
+    if (!scmService.socketServer) {
+        scmService.setServer(server);
+    }
+
+    socket.on('ping', async () => {
+        await new Promise((res) => setTimeout(res, 5000));
         socket.emit('pong');
     });
 
@@ -43,16 +54,28 @@ const socketsRouter = (socket: Socket) => {
 
     socket.on('updateConversationDetails', (cid: string) => conversationsSocket.newUpdateEvent(socket, cid));
 
+    socket.on('newName', (cid: string, newName: string) => conversationsSocket.handleNewName(socket, cid, newName));
+
+    socket.on('newAvatar', (cid: string) => conversationsSocket.handleNewAvatar(socket, cid));
+
     socket.on('newConversationUsers', (cid: string, profiles: UserConversationProfile[]) =>
         conversationsSocket.newParticipants(socket, cid, profiles, userSocketMap)
     );
 
-    socket.on('removeConversationUser', (cid: string, uid: string) =>
-        conversationsSocket.removeParticipant(socket, cid, uid)
+    socket.on('removeConversationUser', (cid: string, profile: UserConversationProfile) =>
+        conversationsSocket.removeParticipant(socket, cid, profile)
+    );
+
+    socket.on('schedulePoll', (cid: string, poll: Poll) =>
+        conversationsSocket.initPoll(cid, parsePoll(poll), scmService)
     );
 
     socket.on('pollResponse', (cid: string, pid: string, selectedOptionIndices: number[]) =>
         conversationsSocket.handlePollResponse(socket, cid, pid, selectedOptionIndices)
+    );
+
+    socket.on('scheduleEvent', (cid: string, event: CalendarEvent) =>
+        conversationsSocket.initEvent(cid, parseCalEvent(event), scmService)
     );
 
     socket.on('eventRsvp', (cid: string, eid: string, response: string) =>

@@ -68,11 +68,27 @@ const updatePushTokens: RequestHandler = async (req, res, next) => {
     }
 };
 
+const archiveRemove: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const cid = req.params.id;
+        const updateRes = await usersService.removeConvoFromArchive(cid, uid);
+        if (updateRes) {
+            res.status(200).send(updateRes);
+            return;
+        }
+        res.status(400).send('No such conversation in archive');
+    } catch (err) {
+        next(err);
+    }
+};
+
 const usersController = {
     getCurrentUser,
     createNewUser,
     modifyCurrentUser,
-    updatePushTokens
+    updatePushTokens,
+    archiveRemove
 };
 
 export default usersController;

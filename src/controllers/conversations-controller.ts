@@ -176,7 +176,7 @@ const removeUser: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id as string;
         const uid = req.body.userId;
-        const deletionRes = await conversationsService.removeUser(cid, uid);
+        const deletionRes = await conversationsService.removeUser(cid, uid, false);
         res.status(200).send(deletionRes);
     } catch (err) {
         next(err);
@@ -196,11 +196,25 @@ const joinConvo: RequestHandler = async (req, res, next) => {
     }
 };
 
+const getConversationsInfo: RequestHandler = async (req, res, next) => {
+    try {
+        const cids = req.body as string[];
+        if (!cids) {
+            res.status(404).send();
+            return;
+        }
+        const conversations = await conversationsService.getConversationsInfo(cids);
+        res.status(200).send(conversations);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const leaveConvo: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id as string;
         const uid = res.locals.uid;
-        const deletionRes = await conversationsService.removeUser(cid, uid);
+        const deletionRes = await conversationsService.removeUser(cid, uid, true);
         res.status(200).send(deletionRes);
     } catch (err) {
         next(err);
@@ -299,6 +313,46 @@ const getEvent: RequestHandler = async (req, res, next) => {
     }
 };
 
+const changeLikeIcon: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.cid;
+        const newIcon = req.body;
+        const updateRes = await conversationsService.changeLikeIcon(cid, newIcon);
+        res.status(200).send(updateRes);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const resetLikeIcon: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.cid;
+        const updateRes = await conversationsService.resetLikeIcon(cid);
+        res.status(200).send(updateRes);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const getGalleryMessages: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const cursor: MessageCursor = getCursorForQuery(req);
+        console.log(cursor);
+        const messages: Message[] = await messagesService.getGalleryMessages(cid, cursor);
+
+        const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+        const nextCursor =
+            lastMessage && messages.length >= cursor.size
+                ? encodeCursor(getNextCursor(cursor, lastMessage.timestamp))
+                : 'none';
+        res.set('cursor', nextCursor);
+        res.status(200).send(messages);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const conversationsController = {
     getConversation,
     getConversationInfo,
@@ -318,7 +372,11 @@ const conversationsController = {
     getPoll,
     addEvent,
     recordEventRsvp,
-    getEvent
+    getEvent,
+    changeLikeIcon,
+    resetLikeIcon,
+    getGalleryMessages,
+    getConversationsInfo
 };
 
 export default conversationsController;

@@ -1,8 +1,17 @@
 import { db } from '../firebase';
-import { Conversation, Message, UserConversationProfile, UserData, AvatarImage, DBMessage } from '../models';
-import { parseRequestMessage, parseDBMessage } from '../utils/request-utils';
+import {
+    Conversation,
+    Message,
+    UserConversationProfile,
+    UserData,
+    AvatarImage,
+    DBMessage,
+    ConversationPreview
+} from '../models';
+import { parseRequestMessage, parseDBMessage, cleanUndefinedFields } from '../utils/request-utils';
 import { getQueryForCursor, MessageCursor } from '../pagination';
 import { v4 as uuid } from 'uuid';
+import { cleanConversation } from 'utils/conversation-utils';
 
 const conversationsCol = db.collection('conversations');
 const usersCol = db.collection('users');
@@ -44,24 +53,30 @@ const handleUserConversationMessage = async (
             const matchingConvos = user.conversations.filter((c) => c.cid === cid);
             let avatar: AvatarImage | undefined = undefined;
             let name = cName;
+            let recipientId: string | undefined = undefined;
             if (matchingConvos.length > 0) {
                 unSeenMessages = matchingConvos[0].unSeenMessages;
                 avatar = matchingConvos[0].avatar;
-            }
-            if (!group) {
-                name = user.conversations.filter((c) => c.cid === cid)[0].name;
+                if (!group) {
+                    name = matchingConvos[0].name;
+                    recipientId = matchingConvos[0].recipientId;
+                }
+            } else {
+                return;
             }
             usersCol.doc(id).update({
                 conversations: [
                     ...user.conversations.filter((c) => c.cid !== cid),
-                    {
+                    cleanUndefinedFields({
+                        ...matchingConvos[0],
                         cid: cid,
                         name,
                         avatar,
                         unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
                         lastMessageTime: message.timestamp,
-                        lastMessageContent: message.content
-                    }
+                        lastMessageContent: message.content,
+                        recipientId
+                    } as ConversationPreview)
                 ]
             });
         }
@@ -181,6 +196,7 @@ const recordPollResponse = async (convo: Conversation, uid: string, pid: string,
 const recordEventRsvp = async (convo: Conversation, eid: string, uid: string, response: string) => {
     try {
         if (!convo.events) return Promise.reject('no such event');
+        let edited = false;
         const newEventsArr = convo.events.map((e) => {
             if (e.id === eid) {
                 const clearedEvent = {
@@ -189,29 +205,55 @@ const recordEventRsvp = async (convo: Conversation, eid: string, uid: string, re
                     going: e.going.filter((p) => p !== uid)
                 };
                 if (response === 'going') {
-                    if (e.going.includes(uid)) return clearedEvent;
-                    return {
+                    if (e.going.includes(uid)) {
+                        if (e !== clearedEvent) edited = true;
+                        return clearedEvent;
+                    }
+                    const newEvent = {
                         ...e,
                         going: [...e.going.filter((p) => p !== uid), uid],
                         notGoing: e.notGoing.filter((p) => p !== uid)
                     };
+                    if (e !== newEvent) edited = true;
+                    return newEvent;
                 } else if (response === 'notGoing') {
-                    if (e.notGoing.includes(uid)) return clearedEvent;
-                    return {
+                    if (e.notGoing.includes(uid)) {
+                        if (e !== clearedEvent) edited = true;
+                        return clearedEvent;
+                    }
+                    const newEvent = {
                         ...e,
                         notGoing: [...e.notGoing.filter((p) => p !== uid), uid],
                         going: e.going.filter((p) => p !== uid)
                     };
+                    if (e !== newEvent) edited = true;
+                    return newEvent;
                 } else {
+                    if (e !== clearedEvent) edited = true;
                     return clearedEvent;
                 }
             }
             return e;
         });
-        const updateRes = await conversationsCol.doc(convo.id).update({
+        await conversationsCol.doc(convo.id).update({
             events: newEventsArr
         });
-        return updateRes;
+        return edited;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getGalleryMessages = async (cid: string, cursor: MessageCursor) => {
+    try {
+        const rawQuery = conversationsCol.doc(cid).collection('messages').orderBy('media');
+        const cursorQuery = getQueryForCursor(rawQuery, cursor);
+        const messageDocs = await cursorQuery.get();
+        const messages: Message[] = [];
+        messageDocs.forEach((md) => {
+            messages.push(parseDBMessage(md.data() as DBMessage));
+        });
+        return messages;
     } catch (err) {
         return Promise.reject(err);
     }
@@ -226,7 +268,8 @@ const messagesService = {
     getConversationMessage,
     storeNewLike,
     recordPollResponse,
-    recordEventRsvp
+    recordEventRsvp,
+    getGalleryMessages
 };
 
 export default messagesService;

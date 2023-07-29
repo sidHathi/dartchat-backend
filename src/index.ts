@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import * as http from 'http';
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
 import { profilesRouter, usersRouter, socketsRouter, conversationsRouter } from './routers';
 import { isAuthenticated, socketAuth } from './middleware';
@@ -28,7 +28,9 @@ app.get('/', (req, res, next) => {
 const server = http.createServer(app);
 const io = new Server(server);
 
-io.use(socketAuth).on('connection', socketsRouter);
+io.use(socketAuth).on('connection', (socket: Socket) => {
+    socketsRouter(socket, io);
+});
 
 // start the server
 server.listen(process.env.BACK_PORT, () => {

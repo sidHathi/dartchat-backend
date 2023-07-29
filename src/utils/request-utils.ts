@@ -1,4 +1,13 @@
-import { DBMessage, Message, RawMessage, DBUserData, UserData, DBConversationPreview } from '../models';
+import {
+    DBMessage,
+    Message,
+    RawMessage,
+    DBUserData,
+    UserData,
+    DBConversationPreview,
+    CalendarEvent,
+    Poll
+} from '../models';
 
 export const cleanUndefinedFields = (obj: any) => {
     return Object.keys(obj).reduce((acc: any, key) => {
@@ -40,4 +49,28 @@ export const parseDBUserData = (user: DBUserData): UserData => {
               }))
             : []
     };
+};
+
+export const parseCalEvent = (raw: any): CalendarEvent => {
+    return Object.fromEntries(
+        Object.entries(raw).map(([key, val]) => {
+            if (key === 'date') {
+                return [key, new Date(Date.parse(val as string))];
+            } else if (key === 'reminders') {
+                return [key, (val as string[]).map((s) => new Date(Date.parse(s)))];
+            }
+            return [key, val];
+        })
+    ) as CalendarEvent;
+};
+
+export const parsePoll = (raw: any): Poll => {
+    return Object.fromEntries(
+        Object.entries(raw).map(([key, val]) => {
+            if (key === 'expirationDate') {
+                return [key, new Date(Date.parse(val as string))];
+            }
+            return [key, val];
+        })
+    ) as Poll;
 };

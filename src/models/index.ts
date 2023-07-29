@@ -6,7 +6,8 @@ import UserProfile from './UserProfile';
 import SocketEvent from './SocketEvent';
 import AvatarImage from './AvatarImage';
 import UserConversationProfile, { NotificationStatus } from './UserConversationProfile';
-import { Poll, CalendarEvent } from './MessageObjects';
+import { Poll, CalendarEvent, LikeIcon } from './MessageObjects';
+import ScheduledMessage from './ScheduledMessage';
 
 export {
     Conversation,
@@ -23,5 +24,7 @@ export {
     UserConversationProfile,
     NotificationStatus,
     Poll,
-    CalendarEvent
+    CalendarEvent,
+    LikeIcon,
+    ScheduledMessage
 };

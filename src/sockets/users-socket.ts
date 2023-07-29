@@ -9,6 +9,7 @@ const onUserAuth = async (socket: Socket) => {
         user.conversations?.map((c: ConversationPreview) => {
             socket.join(c.cid);
         });
+        socket.join(user.id);
         return user;
     } catch (err) {
         return null;

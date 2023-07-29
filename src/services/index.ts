@@ -3,6 +3,8 @@ import profileService from './profiles-service';
 import conversationsService from './conversations-service';
 import messagesService from './messages-service';
 import pushNotificationsService, { PushNotificationsService } from './pushNotifications-service';
+import systemMessagingService from './systemMessaging-service';
+import scheduledMessagesService, { ScheduledMessagesService } from './scheduledMessages-service';
 
 export {
     usersService,
@@ -10,5 +12,8 @@ export {
     conversationsService,
     messagesService,
     pushNotificationsService,
-    PushNotificationsService
+    PushNotificationsService,
+    systemMessagingService,
+    scheduledMessagesService,
+    ScheduledMessagesService
 };

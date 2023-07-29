@@ -10,7 +10,8 @@ import {
     UserConversationProfile,
     NotificationStatus,
     Poll,
-    CalendarEvent
+    CalendarEvent,
+    LikeIcon
 } from '../models';
 import { cleanUndefinedFields } from '../utils/request-utils';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -45,6 +46,7 @@ const getConversationInfo = async (cid: string): Promise<Conversation | never> =
 
 const addUsersToNewConversation = async (newConversation: Conversation) => {
     try {
+        const pids = newConversation.participants.map((p) => p.id);
         const previewsForUsers: { [id: string]: ConversationPreview } = {};
         newConversation.participants.map((participant) => {
             const preview: any = {
@@ -62,9 +64,12 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
             }
             previewsForUsers[participant.id] = preview;
         });
-        Object.entries(previewsForUsers).map(([id, preview]) =>
-            usersCol.doc(id).update({
-                conversations: FieldValue.arrayUnion(preview)
+        await Promise.all(
+            Object.entries(previewsForUsers).map(async ([id, preview]) => {
+                await usersCol.doc(id).update({
+                    conversations: FieldValue.arrayUnion(preview)
+                });
+                await usersService.addIdArrToContacts(pids, id);
             })
         );
     } catch (err) {
@@ -225,9 +230,12 @@ const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
         });
         if (res) {
             const updatedConvo = await getConversationInfo(cid);
+            const pids = updatedConvo.participants.map((p) => p.id);
             await Promise.all(
                 profiles.map(async (profile) => {
                     await usersService.handleConversationAdd(updatedConvo, profile.id);
+                    await usersService.addIdArrToContacts(pids, profile.id);
+                    await usersService.removeConvoFromArchive(cid, profile.id);
                 })
             );
         }
@@ -237,7 +245,7 @@ const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
     }
 };
 
-const removeUser = async (cid: string, uid: string) => {
+const removeUser = async (cid: string, uid: string, archive: boolean) => {
     try {
         const convo = await getConversationInfo(cid);
         const updatedParticipants = convo.participants.filter((p) => p.id !== uid);
@@ -246,6 +254,9 @@ const removeUser = async (cid: string, uid: string) => {
         });
         if (res) {
             await usersService.handleLeaveConversation(cid, uid);
+            if (archive) {
+                await usersService.addConvoToArchive(cid, uid);
+            }
         }
         return res;
     } catch (err) {
@@ -328,6 +339,40 @@ const getEvent = async (cid: string, eid: string) => {
     }
 };
 
+const changeLikeIcon = async (cid: string, newLikeIcon: LikeIcon) => {
+    try {
+        const updateRes = await conversationsCol.doc(cid).update({
+            customLikeIcon: newLikeIcon
+        });
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const resetLikeIcon = async (cid: string) => {
+    try {
+        const updateRes = await conversationsCol.doc(cid).update({
+            customLikeIcon: FieldValue.delete()
+        });
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const getConversationsInfo = async (cids: string[]) => {
+    try {
+        if (cids.length < 1) return undefined;
+        const conversationDocs = await conversationsCol.where('id', 'in', cids).get();
+        const conversations: Conversation[] = [];
+        conversationDocs.forEach((c) => conversations.push(cleanConversation(c.data() as Conversation)));
+        return conversations;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const conversationsService = {
     createNewConversation,
     getConversationInfo,
@@ -346,7 +391,10 @@ const conversationsService = {
     getPoll,
     addEvent,
     recordEventRsvp,
-    getEvent
+    getEvent,
+    changeLikeIcon,
+    resetLikeIcon,
+    getConversationsInfo
 };
 
 export default conversationsService;
