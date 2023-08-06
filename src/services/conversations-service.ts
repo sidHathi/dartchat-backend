@@ -20,15 +20,19 @@ import { MessageCursor, getQueryForCursor } from '../pagination';
 import { parseDBMessage } from '../utils/request-utils';
 import { cleanConversation, getUserConversationAvatar } from '../utils/conversation-utils';
 import messagesService from './messages-service';
+import secretsService from './secrets-service';
 
 const usersCol = db.collection('users');
 const conversationsCol = db.collection('conversations');
 
-const createNewConversation = async (newConversation: Conversation) => {
+const createNewConversation = async (newConversation: Conversation, userKeyMap?: { [key: string]: string }) => {
     try {
         await conversationsCol.doc(newConversation.id).set(cleanConversation(newConversation));
         conversationsCol.doc(newConversation.id).collection('messages');
         await addUsersToNewConversation(newConversation);
+        if (userKeyMap && newConversation.publicKey) {
+            await secretsService.addUserSecretsForNewConversation(newConversation, userKeyMap);
+        }
         return newConversation;
     } catch (err) {
         return Promise.reject(err);
@@ -53,7 +57,9 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
                 cid: newConversation.id,
                 unSeenMessages: 0,
                 lastMessageTime: new Date(),
-                avatar: getUserConversationAvatar(newConversation, participant.id)
+                avatar: getUserConversationAvatar(newConversation, participant.id),
+                group: newConversation.group,
+                publicKey: newConversation.publicKey
             };
             if (!newConversation.group) {
                 const otherParticipant = newConversation.participants.filter((p) => p.id !== participant.id)[0];
@@ -67,7 +73,7 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
         await Promise.all(
             Object.entries(previewsForUsers).map(async ([id, preview]) => {
                 await usersCol.doc(id).update({
-                    conversations: FieldValue.arrayUnion(preview)
+                    conversations: FieldValue.arrayUnion(cleanUndefinedFields(preview))
                 });
                 await usersService.addIdArrToContacts(pids, id);
             })
@@ -117,7 +123,7 @@ const deleteConversation = async (cid: string, userId: string) => {
             if (currentUser && currentUser.conversations) {
                 const res = await usersService.updateUser(userId, {
                     ...currentUser,
-                    conversations: currentUser.conversations.filter((c) => c.cid !== cid)
+                    conversations: currentUser.conversations.filter((c) => c.cid !== cid) || []
                 });
                 return res;
             }
@@ -148,9 +154,12 @@ const deleteConversation = async (cid: string, userId: string) => {
 const updateConversationProfile = async (cid: string, newProfile: UserProfile) => {
     try {
         const convo = await getConversationInfo(cid);
-        const newParticipants = [...convo.participants.filter((p) => p.id !== newProfile.id), newProfile];
+        const newParticipants = [
+            ...convo.participants.filter((p) => p.id !== newProfile.id).map((p) => cleanUndefinedFields(p)),
+            cleanUndefinedFields(newProfile)
+        ];
         const res = await conversationsCol.doc(cid).update({
-            participants: newParticipants
+            participants: cleanUndefinedFields(newParticipants)
         });
         return res;
     } catch (err) {
@@ -171,7 +180,7 @@ const updateConversationDetails = async (
             name: newDetails.newName,
             avatar: newDetails.newAvatar
         });
-        const res = await conversationsCol.doc(cid).update(udpates);
+        const res = await conversationsCol.doc(cid).update(cleanUndefinedFields(udpates));
         if (res) {
             await updateConversationPreviews(cid);
             return res;
@@ -226,7 +235,7 @@ const updateUserNotStatus = async (cid: string, uid: string, newStatus: Notifica
 const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
     try {
         const res = await conversationsCol.doc(cid).update({
-            participants: FieldValue.arrayUnion(...profiles)
+            participants: FieldValue.arrayUnion(...profiles.map((p) => cleanUndefinedFields(p)))
         });
         if (res) {
             const updatedConvo = await getConversationInfo(cid);
@@ -248,9 +257,9 @@ const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
 const removeUser = async (cid: string, uid: string, archive: boolean) => {
     try {
         const convo = await getConversationInfo(cid);
-        const updatedParticipants = convo.participants.filter((p) => p.id !== uid);
+        const updatedParticipants = convo.participants.filter((p) => p.id !== uid).map((p) => cleanUndefinedFields(p));
         const res = await conversationsCol.doc(cid).update({
-            participants: updatedParticipants
+            participants: updatedParticipants || []
         });
         if (res) {
             await usersService.handleLeaveConversation(cid, uid);

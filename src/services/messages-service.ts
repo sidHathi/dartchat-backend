@@ -12,6 +12,7 @@ import { parseRequestMessage, parseDBMessage, cleanUndefinedFields } from '../ut
 import { getQueryForCursor, MessageCursor } from '../pagination';
 import { v4 as uuid } from 'uuid';
 import { cleanConversation } from 'utils/conversation-utils';
+import { DecryptedMessage, EncryptedMessage } from 'models/Message';
 
 const conversationsCol = db.collection('conversations');
 const usersCol = db.collection('users');
@@ -64,6 +65,10 @@ const handleUserConversationMessage = async (
             } else {
                 return;
             }
+            const lastMessageContent =
+                'encryptedFields' in message
+                    ? (message as EncryptedMessage).encryptedFields
+                    : (message as DecryptedMessage).content;
             usersCol.doc(id).update({
                 conversations: [
                     ...user.conversations.filter((c) => c.cid !== cid),
@@ -74,7 +79,8 @@ const handleUserConversationMessage = async (
                         avatar,
                         unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
                         lastMessageTime: message.timestamp,
-                        lastMessageContent: message.content,
+                        lastMessageContent,
+                        lastMessage: message,
                         recipientId
                     } as ConversationPreview)
                 ]

@@ -4,7 +4,7 @@ import { ObjectRef } from './MessageObjects';
 
 type MessageType = 'plainText' | 'media' | 'ref' | 'system';
 
-type EncryptionLevel = 'none' | 'e2e' | 'group' | 'doubleRatchet';
+type EncryptionLevel = 'none' | 'encrypted' | 'doubleRatchet';
 
 export type MessageMedia = {
     id: string;
@@ -14,50 +14,38 @@ export type MessageMedia = {
     height: number;
 };
 
-type Message = {
+type MessageBase = {
     id: string;
-    content: string;
-    media?: MessageMedia[];
     timestamp: Date;
-    senderId: string;
-    likes: string[];
-    replyRef?: ReplyRef;
     messageType: MessageType;
     encryptionLevel: EncryptionLevel;
+    senderId: string;
+    likes: string[];
     senderProfile?: UserConversationProfile;
+    delivered?: boolean;
     mentions?: UserConversationProfile[];
+    replyRef?: ReplyRef;
+};
+
+export type DecryptedMessage = MessageBase & {
+    content: string;
+    media?: MessageMedia[];
     objectRef?: ObjectRef;
 };
 
-export type RawMessage = {
-    id: string;
-    content: string;
-    media?: MessageMedia[];
+export type EncryptedMessage = MessageBase & {
+    encryptedFields: string;
+};
+
+export type RawMessage = Omit<Message, 'timestamp'> & {
     timestamp: string;
-    senderId: string;
-    likes: string[];
-    replyRef?: ReplyRef;
-    messageType: MessageType;
-    encryptionLevel: EncryptionLevel;
-    senderProfile?: UserConversationProfile;
-    mentions?: UserConversationProfile[];
-    objectRef?: ObjectRef;
 };
 
-export type DBMessage = {
-    id: string;
-    content: string;
-    media?: MessageMedia[];
+export type DBMessage = Omit<Message, 'timestamp'> & {
     timestamp: Timestamp;
-    senderId: string;
-    likes: string[];
-    replyRef?: ReplyRef;
-    messageType: MessageType;
-    encryptionLevel: EncryptionLevel;
-    senderProfile?: UserConversationProfile;
-    mentions?: UserConversationProfile[];
-    objectRef?: ObjectRef;
 };
+
+type Message = DecryptedMessage | EncryptedMessage;
 
 type ReplyRef = {
     id: string;

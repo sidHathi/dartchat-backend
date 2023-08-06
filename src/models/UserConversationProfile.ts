@@ -9,7 +9,7 @@ type UserConversationProfile = {
     avatar?: AvatarImage;
     notifications?: NotificationStatus;
     // implement later!!
-    publicEncryptionKey?: string;
+    publicKey?: string;
 };
 
 export default UserConversationProfile;

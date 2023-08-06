@@ -29,6 +29,7 @@ export const getProfileForUser = (user: UserData, displayName?: string): UserCon
         handle: user.handle,
         displayName: displayName || user.displayName || user.handle,
         avatar: user.avatar,
-        notifications: 'all'
+        notifications: 'all',
+        publicKey: user.publicKey
     };
 };

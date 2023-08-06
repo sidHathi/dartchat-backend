@@ -36,7 +36,7 @@ export const parseDBMessage = (message: DBMessage): Message => {
     return {
         ...message,
         timestamp: message.timestamp.toDate()
-    };
+    } as Message;
 };
 
 export const parseDBUserData = (user: DBUserData): UserData => {
@@ -45,7 +45,8 @@ export const parseDBUserData = (user: DBUserData): UserData => {
         conversations: user.conversations
             ? user.conversations.map((c: DBConversationPreview) => ({
                   ...c,
-                  lastMessageTime: c.lastMessageTime.toDate()
+                  lastMessageTime: c.lastMessageTime.toDate(),
+                  lastMessage: c.lastMessage ? parseDBMessage(c.lastMessage) : undefined
               }))
             : []
     };

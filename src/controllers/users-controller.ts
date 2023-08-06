@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { usersService } from '../services';
+import { profileService, secretsService, usersService } from '../services';
 import { UserData } from '../models';
 import { getErrorMessage } from '../utils/request-utils';
 
@@ -62,7 +62,7 @@ const updatePushTokens: RequestHandler = async (req, res, next) => {
             res.status(200).send();
             return;
         }
-        res.status(400).send();
+        res.status(400).send('token already added');
     } catch (err) {
         next(err);
     }
@@ -83,12 +83,75 @@ const archiveRemove: RequestHandler = async (req, res, next) => {
     }
 };
 
+const readKeyUpdates: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const cids = req.body.cids;
+        const user = await usersService.getUser(uid);
+        if (await secretsService.handleKeyUpdateReceipt(user, cids)) {
+            res.status(200).send();
+            return;
+        }
+        res.status(400).send('unable to complete key update');
+    } catch (err) {
+        next(err);
+    }
+};
+
+const setKeySalt: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const salt = req.body.salt;
+        if (salt && (await secretsService.setUserKeySalt(uid, salt))) {
+            res.status(200).send();
+            return;
+        }
+        res.status(400).send();
+    } catch (err) {
+        next(err);
+    }
+};
+
+const setSecrets: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const secrets = req.body.secrets;
+        if (secrets && (await secretsService.setUserSecrets(uid, secrets))) {
+            res.status(200).send();
+            return;
+        }
+        res.status(400).send();
+    } catch (err) {
+        next(err);
+    }
+};
+
+const updatePublicKey: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const newKey = req.body.publicKey;
+        const userUpdateRes = await usersService.setUserPublicKey(uid, newKey);
+        const profileUpdateRes = await profileService.updatePublicKey(uid, newKey);
+        if (userUpdateRes && profileUpdateRes) {
+            res.status(200).send();
+            return;
+        }
+        res.status(400).send();
+    } catch (err) {
+        next(err);
+    }
+};
+
 const usersController = {
     getCurrentUser,
     createNewUser,
     modifyCurrentUser,
     updatePushTokens,
-    archiveRemove
+    archiveRemove,
+    readKeyUpdates,
+    setKeySalt,
+    setSecrets,
+    updatePublicKey
 };
 
 export default usersController;

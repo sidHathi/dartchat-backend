@@ -3,7 +3,7 @@ import { UserData, UserProfile } from '../models';
 import { cleanUndefinedFields } from '../utils/request-utils';
 import { FieldPath, Filter } from 'firebase-admin/firestore';
 
-const profileCol = db.collection('profiles');
+const profilesCol = db.collection('profiles');
 
 const createNewProfile = async (newUser: UserData) => {
     try {
@@ -15,7 +15,7 @@ const createNewProfile = async (newUser: UserData) => {
             email: newUser.email,
             displayName: newUser.displayName || newUser.handle
         };
-        profileCol.doc(newUser.id).set(cleanUndefinedFields(userProfile));
+        profilesCol.doc(newUser.id).set(cleanUndefinedFields(userProfile));
         return userProfile;
     } catch (err) {
         return Promise.reject(err);
@@ -33,7 +33,7 @@ const updateProfile = async (updatedUser: UserData) => {
             displayName: updatedUser.displayName || updatedUser.handle,
             avatar: updatedUser.avatar
         };
-        profileCol.doc(updatedUser.id).update(cleanUndefinedFields(updatedUserProfile));
+        profilesCol.doc(updatedUser.id).update(cleanUndefinedFields(updatedUserProfile));
         return updatedUserProfile;
     } catch (err) {
         return Promise.reject(err);
@@ -42,7 +42,7 @@ const updateProfile = async (updatedUser: UserData) => {
 
 const getProfile = async (id: string) => {
     try {
-        const res = await profileCol.doc(id).get();
+        const res = await profilesCol.doc(id).get();
         if (!res.exists) {
             throw new Error('No user found for given id');
         } else {
@@ -55,7 +55,7 @@ const getProfile = async (id: string) => {
 
 const profileSearch = async (qString: string) => {
     try {
-        const matchingDocs = await profileCol
+        const matchingDocs = await profilesCol
             .where(
                 Filter.or(
                     Filter.where('handle', '==', qString),
@@ -76,10 +76,21 @@ const profileSearch = async (qString: string) => {
 const getProfiles = async (ids: string[]) => {
     try {
         if (ids.length < 1) return undefined;
-        const profileDocs = await profileCol.where('id', 'in', ids).get();
+        const profileDocs = await profilesCol.where('id', 'in', ids).get();
         const profiles: UserProfile[] = [];
         profileDocs.forEach((doc) => profiles.push(doc.data() as UserProfile));
         return profiles;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const updatePublicKey = async (uid: string, newKey: string) => {
+    try {
+        const updateRes = await profilesCol.doc(uid).update({
+            publicKey: newKey
+        });
+        return updateRes;
     } catch (err) {
         return Promise.reject(err);
     }
@@ -90,7 +101,8 @@ const profileService = {
     updateProfile,
     getProfile,
     profileSearch,
-    getProfiles
+    getProfiles,
+    updatePublicKey
 };
 
 export default profileService;

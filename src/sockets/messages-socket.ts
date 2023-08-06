@@ -1,7 +1,7 @@
 import { Socket } from 'socket.io';
 import { Message, SocketEvent } from '../models';
 import { messagesService } from '../services';
-import { PushNotificationsService } from 'services/pushNotifications-service';
+import { PushNotificationsService } from '../services/pushNotifications-service';
 
 const newMessage = async (socket: Socket, cid: string, message: Message, pnService?: PushNotificationsService) => {
     console.log('new message received');
@@ -9,12 +9,18 @@ const newMessage = async (socket: Socket, cid: string, message: Message, pnServi
     try {
         console.log('sending to room: ' + cid);
         console.log(message);
-        await messagesService.storeNewMessage(cid, message);
-        socket.to(cid).emit('newMessage', cid, message);
-        if (pnService) {
-            await pnService.pushMessage(cid, message);
+        const deliveredMessage: Message = {
+            ...message,
+            delivered: true
+        };
+        await messagesService.storeNewMessage(cid, deliveredMessage);
+        socket.to(cid).emit('newMessage', cid, deliveredMessage);
+        console.log(pnService);
+        if (pnService !== undefined) {
+            await pnService.pushMessage(cid, deliveredMessage);
         }
-        return message;
+        socket.emit('messageDelivered', cid, message.id);
+        return deliveredMessage;
     } catch (err) {
         console.log(err);
         return Promise.reject(err);

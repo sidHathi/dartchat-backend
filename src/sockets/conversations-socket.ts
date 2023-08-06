@@ -5,6 +5,7 @@ import {
     messagesService,
     PushNotificationsService,
     ScheduledMessagesService,
+    secretsService,
     systemMessagingService,
     usersService
 } from '../services';
@@ -13,6 +14,7 @@ const newConversation = async (
     socket: Socket,
     newConvo: Conversation,
     userSocketMap: { [userId: string]: string },
+    recipientKeyMap?: { [key: string]: string },
     pnService?: PushNotificationsService
 ): Promise<Conversation | null> => {
     console.log('new conversation message received');
@@ -23,18 +25,24 @@ const newConversation = async (
             return newConvo;
         }
         const seedMessage = await messagesService.generateConversationInitMessage(newConvo, user.uid);
-        await conversationsService.createNewConversation(newConvo);
+        await conversationsService.createNewConversation(newConvo, recipientKeyMap);
         await messagesService.storeNewMessage(newConvo.id, seedMessage);
-        const onlineUsers: string[] = newConvo.participants
+        const onlineUsers: [string, string | undefined][] = newConvo.participants
             .map((p) => p.id)
             .filter((uid) => {
-                socket.to(uid).emit('newConversation', newConvo);
+                if (newConvo.publicKey && recipientKeyMap && !(uid in recipientKeyMap)) {
+                    return false;
+                }
+                socket.to(uid).emit('newConversation', newConvo, recipientKeyMap ? recipientKeyMap[uid] : undefined);
                 return uid !== user.uid && uid in userSocketMap;
             })
-            .map((uid) => userSocketMap[uid]);
-        onlineUsers.forEach((usid) => {
+            .map((uid) => [
+                userSocketMap[uid],
+                newConvo.publicKey && recipientKeyMap && uid in recipientKeyMap ? recipientKeyMap[uid] : undefined
+            ]);
+        onlineUsers.forEach(([usid, key]) => {
             console.log(usid);
-            socket.broadcast.to(usid).emit('newConversation', newConvo);
+            socket.broadcast.to(usid).emit('newConversation', newConvo, key);
         });
         socket.to(newConvo.id).emit('newMessage', newConvo.id, seedMessage);
         socket.emit('newMessage', newConvo.id, seedMessage);
@@ -54,20 +62,23 @@ const newPrivateMessage = async (
     seedConvo: Conversation,
     userSocketMap: { [userId: string]: string },
     firstMessage: Message,
+    recipientKeyMap?: { [userId: string]: string },
     pnService?: PushNotificationsService
 ) => {
     try {
-        const newConvo = await newConversation(socket, seedConvo, userSocketMap, pnService);
+        const newConvo = await newConversation(socket, seedConvo, userSocketMap, recipientKeyMap, pnService);
         if (newConvo) {
             socket.emit('newConversation', newConvo);
-            await messagesService.storeNewMessage(newConvo.id, {
+            const deliveredMessage = {
                 ...firstMessage,
+                delivered: true,
                 timestamp: new Date()
-            });
-            socket.to(newConvo.id).emit('newMessage', newConvo.id, firstMessage);
-            socket.emit('newMessage', newConvo.id, firstMessage);
+            };
+            await messagesService.storeNewMessage(newConvo.id, deliveredMessage);
+            socket.to(newConvo.id).emit('newMessage', newConvo.id, deliveredMessage);
+            socket.emit('newMessage', newConvo.id, deliveredMessage);
             if (pnService) {
-                await pnService.pushMessage(newConvo.id, firstMessage);
+                await pnService.pushMessage(newConvo.id, deliveredMessage);
             }
         }
         return newConvo;
@@ -116,7 +127,9 @@ const newParticipants = async (
     socket: Socket,
     cid: string,
     profiles: UserConversationProfile[],
-    userSocketMap: { [userId: string]: string }
+    userSocketMap: { [userId: string]: string },
+    userKeyMap?: { [id: string]: string },
+    pnService?: PushNotificationsService
 ) => {
     // handle logic through http requests so permissions can be taken into account and error messages sent back if necessary
     socket.to(cid).emit('newConversationUsers', cid, profiles);
@@ -124,16 +137,23 @@ const newParticipants = async (
     const convo = await conversationsService.getConversationInfo(cid);
     await Promise.all(
         profiles.map(async (p) => {
-            if (p.id in userSocketMap) {
-                socket.broadcast.to(userSocketMap[p.id]).emit('newConversationUsers', cid, []);
-            }
+            socket.to(p.id).emit('newConversationUsers', cid, [], userKeyMap);
             if (p.id !== senderId) {
                 await systemMessagingService.handleUserAdded(convo, p.id, senderId, socket);
+                if (userKeyMap) {
+                    secretsService.addUserSecretsForNewParticipants(cid, profiles, userKeyMap);
+                }
             } else {
                 await systemMessagingService.handleUserJoins(convo.id, p, socket);
             }
         })
     );
+    if (pnService) {
+        const senderProfile = convo.participants.find((p) => p.id === senderId);
+        if (senderProfile) {
+            await pnService.pushNewConvoParticipants(convo, senderProfile, profiles, userKeyMap);
+        }
+    }
 };
 
 const removeParticipant = async (socket: Socket, cid: string, profile: UserConversationProfile) => {

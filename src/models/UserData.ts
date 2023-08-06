@@ -15,6 +15,9 @@ export type DBUserData = {
     privateEncryptionKey?: string;
     pushTokens?: string[];
     archivedConvos?: string[];
+    publicKey?: string;
+    keySalt?: string; // base64 encoded random prime number
+    secrets?: string;
 };
 
 type UserData = {
@@ -30,6 +33,9 @@ type UserData = {
     privateEncryptionKey?: string;
     pushTokens?: string[];
     archivedConvos?: string[];
+    publicKey?: string;
+    keySalt?: string; // base64 encoded random prime number
+    secrets?: string;
 };
 
 export default UserData;

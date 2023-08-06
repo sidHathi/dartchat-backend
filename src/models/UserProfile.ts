@@ -7,8 +7,7 @@ type UserProfile = {
     email?: string;
     phone?: string;
     avatar?: AvatarImage;
-    // implement later!!
-    publicEncryptionKey?: string;
+    publicKey?: string;
 };
 
 export default UserProfile;

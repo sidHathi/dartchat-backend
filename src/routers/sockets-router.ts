@@ -32,12 +32,14 @@ const socketsRouter = (socket: Socket, server: Server) => {
         socket.join(rid);
     });
 
-    socket.on('newConversation', (newConvo: Conversation) =>
-        conversationsSocket.newConversation(socket, newConvo, userSocketMap, pnService)
+    socket.on('newConversation', (newConvo: Conversation, recipientKeyMap?: { [id: string]: string }) =>
+        conversationsSocket.newConversation(socket, newConvo, userSocketMap, recipientKeyMap, pnService)
     );
 
-    socket.on('newPrivateMessage', (seedConvo: Conversation, message: Message) =>
-        conversationsSocket.newPrivateMessage(socket, seedConvo, userSocketMap, message, pnService)
+    socket.on(
+        'newPrivateMessage',
+        (seedConvo: Conversation, message: Message, recipientKeyMap?: { [key: string]: string }) =>
+            conversationsSocket.newPrivateMessage(socket, seedConvo, userSocketMap, message, recipientKeyMap, pnService)
     );
 
     socket.on('deleteConversation', (cid: string) => conversationsSocket.conversationDelete(socket, cid));
@@ -58,8 +60,10 @@ const socketsRouter = (socket: Socket, server: Server) => {
 
     socket.on('newAvatar', (cid: string) => conversationsSocket.handleNewAvatar(socket, cid));
 
-    socket.on('newConversationUsers', (cid: string, profiles: UserConversationProfile[]) =>
-        conversationsSocket.newParticipants(socket, cid, profiles, userSocketMap)
+    socket.on(
+        'newConversationUsers',
+        (cid: string, profiles: UserConversationProfile[], userKeyMap?: { [id: string]: string }) =>
+            conversationsSocket.newParticipants(socket, cid, profiles, userSocketMap)
     );
 
     socket.on('removeConversationUser', (cid: string, profile: UserConversationProfile) =>

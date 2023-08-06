@@ -71,7 +71,7 @@ const updateUser = async (userId: string, updatedUserDetails: UserData): Promise
             return Promise.reject('Phone number in use');
         }
         await usersCol.doc(userId).update(cleanUndefinedFields(updatedUser));
-        await profileService.updateProfile(updatedUser);
+        await profileService.updateProfile(cleanUndefinedFields(updatedUser));
         return updatedUser;
     } catch (err) {
         return Promise.reject(err);
@@ -139,13 +139,14 @@ const handleReadReceipt = async (uid: string, cid: string) => {
 };
 
 const updatePushNotificationTokens = async (newToken: string, userId: string) => {
+    console.log(`PNTOKEN: ${newToken}`);
     try {
         const user = await getUser(userId);
         if (user.pushTokens && user.pushTokens.includes(newToken)) {
             return;
         }
         const updateRes = await usersCol.doc(userId).update({
-            pushTokens: FieldValue.arrayUnion([newToken])
+            pushTokens: FieldValue.arrayUnion(newToken)
         });
         return updateRes;
     } catch (err) {
@@ -169,7 +170,10 @@ const updatePreviewDetails = async (updatedConvo: Conversation, userId: string) 
                 ...relevantUpdates
             };
             const res = await usersCol.doc(userId).update({
-                conversations: [updatedPreview, ...user.conversations.filter((c) => c.cid !== updatedConvo.id)]
+                conversations: [
+                    cleanUndefinedFields(updatedPreview),
+                    ...user.conversations.filter((c) => c.cid !== updatedConvo.id).map((c) => cleanUndefinedFields(c))
+                ]
             });
             return res;
         }
@@ -182,7 +186,8 @@ const updatePreviewDetails = async (updatedConvo: Conversation, userId: string) 
 const handleLeaveConversation = async (cid: string, userId: string) => {
     try {
         const user = await getUser(userId);
-        const filteredConvos = user.conversations.filter((c) => c.cid !== cid);
+        const filteredConvos = user.conversations.filter((c) => c.cid !== cid).map((c) => cleanUndefinedFields(c));
+        if (!filteredConvos) return;
         const res = usersCol.doc(userId).update({
             conversations: filteredConvos
         });
@@ -195,14 +200,15 @@ const handleLeaveConversation = async (cid: string, userId: string) => {
 const handleConversationAdd = async (convo: Conversation, userId: string) => {
     try {
         const user = await getUser(userId);
-        const previews = user.conversations;
-        const newPreview = {
+        const previews = user.conversations.map((p) => cleanUndefinedFields(p));
+        const newPreview = cleanUndefinedFields({
             cid: convo.id,
             name: convo.name,
             unSeenMesages: 0,
             avatar: convo.avatar,
-            lastMessageTime: new Date()
-        };
+            lastMessageTime: new Date(),
+            publicKey: convo.publicKey
+        });
         usersCol.doc(userId).update({
             conversations: [newPreview, ...previews]
         });
@@ -231,7 +237,9 @@ const addIdArrToContacts = async (newContactIds: string[], uid: string) => {
         const currUser = await getUser(uid);
         let filteredNewContactIds = newContactIds.filter((c) => c !== uid);
         if (currUser.contacts) {
-            filteredNewContactIds = newContactIds.filter((c) => c !== uid && !currUser.contacts?.includes(c));
+            filteredNewContactIds = newContactIds
+                .filter((c) => c !== uid && !currUser.contacts?.includes(c))
+                .map((c) => cleanUndefinedFields(c));
         }
         if (filteredNewContactIds.length > 0) {
             const updateRes = await usersCol.doc(uid).update({
@@ -263,11 +271,22 @@ const removeConvoFromArchive = async (convoId: string, uid: string) => {
         const currUser = await getUser(uid);
         if (currUser.archivedConvos && currUser.archivedConvos.includes(convoId)) {
             const updateRes = await usersCol.doc(uid).update({
-                archivedConvos: currUser.archivedConvos.filter((c) => c !== convoId)
+                archivedConvos: currUser.archivedConvos.filter((c) => c !== convoId).map((c) => cleanUndefinedFields(c))
             });
             return updateRes;
         }
         return undefined;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const setUserPublicKey = async (uid: string, publicKey: string) => {
+    try {
+        const updateRes = await usersCol.doc(uid).update({
+            publicKey
+        });
+        return updateRes;
     } catch (err) {
         return Promise.reject(err);
     }
@@ -287,7 +306,8 @@ const usersService = {
     addIdToContacts,
     addConvoToArchive,
     addIdArrToContacts,
-    removeConvoFromArchive
+    removeConvoFromArchive,
+    setUserPublicKey
 };
 
 export default usersService;

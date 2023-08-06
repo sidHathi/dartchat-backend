@@ -5,6 +5,7 @@ import messagesService from './messages-service';
 import pushNotificationsService, { PushNotificationsService } from './pushNotifications-service';
 import systemMessagingService from './systemMessaging-service';
 import scheduledMessagesService, { ScheduledMessagesService } from './scheduledMessages-service';
+import secretsService from './secrets-service';
 
 export {
     usersService,
@@ -15,5 +16,6 @@ export {
     PushNotificationsService,
     systemMessagingService,
     scheduledMessagesService,
-    ScheduledMessagesService
+    ScheduledMessagesService,
+    secretsService
 };

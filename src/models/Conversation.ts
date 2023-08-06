@@ -14,6 +14,7 @@ type Conversation = {
     polls?: Poll[];
     events?: CalendarEvent[];
     customLikeIcon?: LikeIcon;
+    publicKey?: string;
 };
 
 export default Conversation;
