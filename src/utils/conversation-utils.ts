@@ -1,6 +1,18 @@
 import { AvatarImage, Conversation, UserConversationProfile, UserData } from 'models';
 import { cleanUndefinedFields } from './request-utils';
 
+export const parseDBConvo = (convo: any): Conversation => {
+    return cleanConversation({
+        ...convo,
+        keyInfo: convo.keyInfo
+            ? {
+                  ...convo.keyInfo,
+                  createdAt: convo.keyInfo.createdAt.toDate()
+              }
+            : undefined
+    }) as Conversation;
+};
+
 export const cleanConversation = (convo: Conversation): Conversation => {
     if (convo.participants.length <= 2) {
         return cleanUndefinedFields({

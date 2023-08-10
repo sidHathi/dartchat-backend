@@ -13,6 +13,7 @@ import { getQueryForCursor, MessageCursor } from '../pagination';
 import { v4 as uuid } from 'uuid';
 import { cleanConversation } from 'utils/conversation-utils';
 import { DecryptedMessage, EncryptedMessage } from 'models/Message';
+import secretsService from './secrets-service';
 
 const conversationsCol = db.collection('conversations');
 const usersCol = db.collection('users');
@@ -99,6 +100,9 @@ const storeNewMessage = async (cid: string, message: Message) => {
         if (!convo) return Promise.reject('no such conversation');
         const participantIds = convo.participants.map((p) => p.id);
         await handleUserConversationMessage(convo.id, convo.name, convo.group, participantIds, parsedMessage);
+        if (message.encryptionLevel === 'encrypted') {
+            await secretsService.updateKeyInfoForMessage(convo);
+        }
         return res;
     } catch (err) {
         return Promise.reject(err);
@@ -265,6 +269,82 @@ const getGalleryMessages = async (cid: string, cursor: MessageCursor) => {
     }
 };
 
+const getLargeMessageList = async (cid: string, maxSize: number, dateLimit?: Date) => {
+    try {
+        let messageQuery = conversationsCol.doc(cid).collection('messages').orderBy('timestamp', 'desc').limit(maxSize);
+        if (dateLimit) {
+            messageQuery = conversationsCol
+                .doc(cid)
+                .collection('messages')
+                .orderBy('timestamp', 'desc')
+                .where('timestamp', '>', dateLimit)
+                .limit(maxSize);
+        }
+        const messageDocs = await messageQuery.get();
+        const messages: Message[] = [];
+        messageDocs.forEach((doc) => {
+            messages.push(parseDBMessage(doc.data() as DBMessage));
+        });
+        return messages;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const reencryptMessages = async (
+    convo: Conversation,
+    reencryptionData: {
+        minDate: string;
+        data: {
+            id: string;
+            encryptedFields: string;
+            publicKey: string;
+        }[];
+    }
+) => {
+    console.log(reencryptionData);
+    try {
+        const idMap = Object.fromEntries(reencryptionData.data.map((triple) => [triple.id, triple]));
+        const updateBatch = db.batch();
+        console.log(reencryptionData.minDate);
+        const parsedMinDate = new Date(Date.parse(reencryptionData.minDate));
+        const messageUpdateDocs = await conversationsCol
+            .doc(convo.id)
+            .collection('messages')
+            .where('timestamp', '>', parsedMinDate)
+            .get();
+        messageUpdateDocs.forEach((doc) => {
+            console.log(doc);
+            const message = doc.data() as DBMessage;
+            if (message.id in idMap) {
+                const encryptedDataForId = idMap[message.id];
+                if (!message.senderProfile) return;
+                updateBatch.update(doc.ref, {
+                    encryptedFields: encryptedDataForId.encryptedFields,
+                    senderProfile: {
+                        ...message.senderProfile,
+                        publicKey: encryptedDataForId.publicKey
+                    }
+                });
+            }
+        });
+        const messageDeletionDocs = await conversationsCol
+            .doc(convo.id)
+            .collection('messages')
+            .where('timestamp', '<', parsedMinDate)
+            .get();
+        messageDeletionDocs.forEach((doc) => {
+            updateBatch.delete(doc.ref);
+        });
+        await updateBatch.commit();
+        console.log('succesfuly updated message encrypted fields');
+        await secretsService.updateKeyInfoForReencryption(convo, reencryptionData.data.length);
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+};
+
 const messagesService = {
     generateConversationInitMessage,
     handleUserConversationMessage,
@@ -275,7 +355,9 @@ const messagesService = {
     storeNewLike,
     recordPollResponse,
     recordEventRsvp,
-    getGalleryMessages
+    getGalleryMessages,
+    getLargeMessageList,
+    reencryptMessages
 };
 
 export default messagesService;

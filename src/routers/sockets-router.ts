@@ -86,6 +86,10 @@ const socketsRouter = (socket: Socket, server: Server) => {
         conversationsSocket.handleEventRsvp(socket, cid, eid, response)
     );
 
+    socket.on('keyChange', (cid: string, newPublicKey: string, userKeyMap: { [id: string]: string }) => {
+        conversationsSocket.handleKeyChange(socket, cid, newPublicKey, userKeyMap);
+    });
+
     socket.on('forceDisconnect', () => {
         socket.disconnect(true);
     });

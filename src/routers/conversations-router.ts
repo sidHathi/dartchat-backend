@@ -24,5 +24,8 @@ conversationsRouter.route('/:cid/likeIcon/reset').put(conversationsController.re
 conversationsRouter.route('/:cid/likeIcon').put(conversationsController.changeLikeIcon);
 conversationsRouter.route('/:id/gallery').get(conversationsController.getGalleryMessages);
 conversationsRouter.route('/forIds').post(conversationsController.getConversationsInfo);
+conversationsRouter.route('/:id/getEncryptionData').post(conversationsController.getReencryptionData);
+conversationsRouter.route('/:id/pushReencryptedMessages').post(conversationsController.pushReencryptedMessages);
+conversationsRouter.route('/:id/changeKeySet').put(conversationsController.changeEncryptionKey);
 
 export default conversationsRouter;

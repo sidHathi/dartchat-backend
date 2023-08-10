@@ -1,9 +1,11 @@
 import { RequestHandler } from 'express';
-import { conversationsService, messagesService, usersService } from '../services';
+import { conversationsService, messagesService, secretsService, usersService } from '../services';
 import { CalendarEvent, Conversation, Message, Poll, UserConversationProfile, UserProfile } from '../models';
 import { MessageCursor, encodeCursor, getNextCursor, getCursorForQuery } from '../pagination';
 import { getErrorMessage } from '../utils/request-utils';
 import { cleanConversation, getProfileForUser } from '../utils/conversation-utils';
+
+const messageTransferLimit = 10000;
 
 const getConversation: RequestHandler = async (req, res, next) => {
     try {
@@ -353,6 +355,46 @@ const getGalleryMessages: RequestHandler = async (req, res, next) => {
     }
 };
 
+const getReencryptionData: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const dateLimit = req.body.dateLimit ? new Date(Date.parse(req.body.dateLimit)) : undefined;
+        const largeMessageList = await messagesService.getLargeMessageList(cid, messageTransferLimit, dateLimit);
+        const encryptionData = await secretsService.getReencryptionFieldsForMessageList(largeMessageList);
+        res.status(200).send(encryptionData);
+    } catch (err) {
+        console.log(err);
+        return next(err);
+    }
+};
+
+const pushReencryptedMessages: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const reencryptionData = req.body;
+        const convo = await conversationsService.getConversationInfo(cid);
+        await messagesService.reencryptMessages(convo, reencryptionData);
+        res.status(200).send();
+    } catch (err) {
+        next(err);
+    }
+};
+
+const changeEncryptionKey: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.id;
+        const uid = res.locals.uid;
+        const { publicKey, userKeyMap, keyInfo } = req.body;
+        const convo = await conversationsService.getConversationInfo(cid);
+        if (await secretsService.changeEncryptionKey(convo, publicKey, uid, userKeyMap, keyInfo)) {
+            res.status(200).send();
+        }
+        res.status(400).send('Key update failed');
+    } catch (err) {
+        next(err);
+    }
+};
+
 const conversationsController = {
     getConversation,
     getConversationInfo,
@@ -376,7 +418,10 @@ const conversationsController = {
     changeLikeIcon,
     resetLikeIcon,
     getGalleryMessages,
-    getConversationsInfo
+    getConversationsInfo,
+    getReencryptionData,
+    pushReencryptedMessages,
+    changeEncryptionKey
 };
 
 export default conversationsController;

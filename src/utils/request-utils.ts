@@ -1,3 +1,4 @@
+import { DocumentData, Query } from 'firebase-admin/firestore';
 import {
     DBMessage,
     Message,
@@ -74,4 +75,13 @@ export const parsePoll = (raw: any): Poll => {
             return [key, val];
         })
     ) as Poll;
+};
+
+export const chunk = <T>(arr: T[], chunkSize: number) => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += chunkSize) {
+        const arrChunk = arr.slice(i, i + chunkSize);
+        chunks.push(arrChunk);
+    }
+    return chunks;
 };

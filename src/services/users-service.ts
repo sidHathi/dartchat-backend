@@ -1,7 +1,7 @@
 import { db } from '../firebase';
 import { DBUserData, UserData, Conversation, ConversationPreview, NotificationStatus } from '../models';
 import profileService from './profiles-service';
-import { cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
+import { chunk, cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { Socket } from 'socket.io';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -22,14 +22,19 @@ const getUser = async (userId: string): Promise<UserData | never> => {
 const getMultipleUsers = async (userIds: string[]): Promise<UserData[] | never> => {
     try {
         if (userIds.length < 1) return Promise.reject('invalid input');
-        const userDocs = await usersCol.where('id', 'in', userIds).get();
-        if (!userDocs.empty) {
-            const res: UserData[] = [];
-            userDocs.forEach((doc) => {
-                res.push(parseDBUserData(doc.data() as DBUserData));
-            });
-            return res;
-        }
+        const batches = chunk<string>(userIds, 10);
+        const res: UserData[] = [];
+        await Promise.all(
+            batches.map(async (batch) => {
+                const userDocs = await usersCol.where('id', 'in', batch).get();
+                if (!userDocs.empty) {
+                    userDocs.forEach((doc) => {
+                        res.push(parseDBUserData(doc.data() as DBUserData));
+                    });
+                }
+            })
+        );
+        if (res.length > 0) return res;
         return Promise.reject('No results found');
     } catch (err) {
         return Promise.reject(err);

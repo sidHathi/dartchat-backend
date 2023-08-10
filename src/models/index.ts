@@ -8,6 +8,7 @@ import AvatarImage from './AvatarImage';
 import UserConversationProfile, { NotificationStatus } from './UserConversationProfile';
 import { Poll, CalendarEvent, LikeIcon } from './MessageObjects';
 import ScheduledMessage from './ScheduledMessage';
+import KeyInfo from './KeyInfo';
 
 export {
     Conversation,
@@ -26,5 +27,6 @@ export {
     Poll,
     CalendarEvent,
     LikeIcon,
-    ScheduledMessage
+    ScheduledMessage,
+    KeyInfo
 };

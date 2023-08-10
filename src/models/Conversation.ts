@@ -2,6 +2,7 @@ import AvatarImage from './AvatarImage';
 import Message from './Message';
 import UserConversationProfile from './UserConversationProfile';
 import { Poll, CalendarEvent, LikeIcon } from './MessageObjects';
+import KeyInfo from './KeyInfo';
 
 type Conversation = {
     id: string;
@@ -15,6 +16,7 @@ type Conversation = {
     events?: CalendarEvent[];
     customLikeIcon?: LikeIcon;
     publicKey?: string;
+    keyInfo?: KeyInfo;
 };
 
 export default Conversation;

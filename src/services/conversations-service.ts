@@ -13,25 +13,29 @@ import {
     CalendarEvent,
     LikeIcon
 } from '../models';
-import { cleanUndefinedFields } from '../utils/request-utils';
+import { chunk, cleanUndefinedFields } from '../utils/request-utils';
 import { FieldValue } from 'firebase-admin/firestore';
 import usersService from './users-service';
 import { MessageCursor, getQueryForCursor } from '../pagination';
 import { parseDBMessage } from '../utils/request-utils';
-import { cleanConversation, getUserConversationAvatar } from '../utils/conversation-utils';
+import { cleanConversation, getUserConversationAvatar, parseDBConvo } from '../utils/conversation-utils';
 import messagesService from './messages-service';
 import secretsService from './secrets-service';
 
 const usersCol = db.collection('users');
 const conversationsCol = db.collection('conversations');
 
-const createNewConversation = async (newConversation: Conversation, userKeyMap?: { [key: string]: string }) => {
+const createNewConversation = async (
+    newConversation: Conversation,
+    uid: string,
+    userKeyMap?: { [key: string]: string }
+) => {
     try {
         await conversationsCol.doc(newConversation.id).set(cleanConversation(newConversation));
         conversationsCol.doc(newConversation.id).collection('messages');
         await addUsersToNewConversation(newConversation);
         if (userKeyMap && newConversation.publicKey) {
-            await secretsService.addUserSecretsForNewConversation(newConversation, userKeyMap);
+            await secretsService.addUserSecretsForNewConversation(newConversation, uid, userKeyMap);
         }
         return newConversation;
     } catch (err) {
@@ -41,8 +45,12 @@ const createNewConversation = async (newConversation: Conversation, userKeyMap?:
 
 const getConversationInfo = async (cid: string): Promise<Conversation | never> => {
     try {
-        const convo = await conversationsCol.doc(cid).get();
-        return cleanConversation(convo.data() as Conversation);
+        const convoDoc = await conversationsCol.doc(cid).get();
+        const convo = parseDBConvo(convoDoc.data() as Conversation);
+        if (!convo.keyInfo) {
+            convo.keyInfo = await secretsService.addKeyInfo(convo);
+        }
+        return convo;
     } catch (err) {
         return Promise.reject(err);
     }
@@ -92,10 +100,12 @@ const getConversation = async (cid: string, messageCursor: MessageCursor) => {
         messageDocs.forEach((md) => {
             messages.push(parseDBMessage(md.data() as DBMessage));
         });
-        // messages.reverse();
         if (convoRes.exists) {
-            const rawConvo = convoRes.data() as Conversation;
+            const rawConvo = parseDBConvo(convoRes.data() as Conversation);
             rawConvo.messages = messages;
+            if (!rawConvo.keyInfo) {
+                rawConvo.keyInfo = await secretsService.addKeyInfo(rawConvo);
+            }
             return rawConvo;
         }
         return null;
@@ -373,9 +383,14 @@ const resetLikeIcon = async (cid: string) => {
 const getConversationsInfo = async (cids: string[]) => {
     try {
         if (cids.length < 1) return undefined;
-        const conversationDocs = await conversationsCol.where('id', 'in', cids).get();
+        const batchedCids = chunk<string>(cids, 10);
         const conversations: Conversation[] = [];
-        conversationDocs.forEach((c) => conversations.push(cleanConversation(c.data() as Conversation)));
+        await Promise.all(
+            batchedCids.map(async (batch) => {
+                const conversationDocs = await conversationsCol.where('id', 'in', batch).get();
+                conversationDocs.forEach((c) => conversations.push(cleanConversation(c.data() as Conversation)));
+            })
+        );
         return conversations;
     } catch (err) {
         return Promise.reject(err);

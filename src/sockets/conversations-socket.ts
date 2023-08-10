@@ -25,7 +25,7 @@ const newConversation = async (
             return newConvo;
         }
         const seedMessage = await messagesService.generateConversationInitMessage(newConvo, user.uid);
-        await conversationsService.createNewConversation(newConvo, recipientKeyMap);
+        await conversationsService.createNewConversation(newConvo, user.uid, recipientKeyMap);
         await messagesService.storeNewMessage(newConvo.id, seedMessage);
         const onlineUsers: [string, string | undefined][] = newConvo.participants
             .map((p) => p.id)
@@ -141,7 +141,7 @@ const newParticipants = async (
             if (p.id !== senderId) {
                 await systemMessagingService.handleUserAdded(convo, p.id, senderId, socket);
                 if (userKeyMap) {
-                    secretsService.addUserSecretsForNewParticipants(cid, profiles, userKeyMap);
+                    secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
                 }
             } else {
                 await systemMessagingService.handleUserJoins(convo.id, p, socket);
@@ -223,6 +223,12 @@ const removeEvent = (eid: string, scmService: ScheduledMessagesService) => {
     systemMessagingService.removeEvent(eid, scmService);
 };
 
+const handleKeyChange = (socket: Socket, cid: string, newPublicKey: string, userKeyMap: { [id: string]: string }) => {
+    Object.keys(userKeyMap).map((id) => {
+        socket.to(id).emit('keyChange', cid, newPublicKey, userKeyMap[id]);
+    });
+};
+
 const conversationsSocket = {
     newConversation,
     newPrivateMessage,
@@ -237,7 +243,8 @@ const conversationsSocket = {
     initPoll,
     removePoll,
     initEvent,
-    removeEvent
+    removeEvent,
+    handleKeyChange
 };
 
 export default conversationsSocket;
