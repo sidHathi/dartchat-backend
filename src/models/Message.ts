@@ -2,7 +2,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import UserConversationProfile from './UserConversationProfile';
 import { ObjectRef } from './MessageObjects';
 
-type MessageType = 'plainText' | 'media' | 'ref' | 'system';
+type MessageType = 'user' | 'system' | 'deletion';
 
 type EncryptionLevel = 'none' | 'encrypted' | 'doubleRatchet';
 

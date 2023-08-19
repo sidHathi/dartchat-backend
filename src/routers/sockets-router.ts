@@ -16,8 +16,7 @@ const scmService: ScheduledMessagesService = scheduledMessagesService.init(null,
 const socketsRouter = (socket: Socket, server: Server) => {
     console.log(`a user connected with id ${socket.id}`);
     userSocketMap[socket.data.user.uid] = socket.id;
-    console.log(userSocketMap);
-    userSocket.onUserAuth(socket);
+    !socket.recovered && userSocket.onUserAuth(socket);
     if (!scmService.socketServer) {
         scmService.setServer(server);
     }
@@ -89,6 +88,10 @@ const socketsRouter = (socket: Socket, server: Server) => {
     socket.on('keyChange', (cid: string, newPublicKey: string, userKeyMap: { [id: string]: string }) => {
         conversationsSocket.handleKeyChange(socket, cid, newPublicKey, userKeyMap);
     });
+
+    socket.on('deleteMessage', (cid: string, mid: string) =>
+        conversationsSocket.deleteMessage(socket, cid, mid, pnService)
+    );
 
     socket.on('forceDisconnect', () => {
         socket.disconnect(true);

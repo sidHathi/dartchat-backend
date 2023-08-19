@@ -27,26 +27,14 @@ const newConversation = async (
         const seedMessage = await messagesService.generateConversationInitMessage(newConvo, user.uid);
         await conversationsService.createNewConversation(newConvo, user.uid, recipientKeyMap);
         await messagesService.storeNewMessage(newConvo.id, seedMessage);
-        const onlineUsers: [string, string | undefined][] = newConvo.participants
-            .map((p) => p.id)
-            .filter((uid) => {
-                if (newConvo.publicKey && recipientKeyMap && !(uid in recipientKeyMap)) {
-                    return false;
-                }
-                socket.to(uid).emit('newConversation', newConvo, recipientKeyMap ? recipientKeyMap[uid] : undefined);
-                return uid !== user.uid && uid in userSocketMap;
-            })
-            .map((uid) => [
-                userSocketMap[uid],
-                newConvo.publicKey && recipientKeyMap && uid in recipientKeyMap ? recipientKeyMap[uid] : undefined
-            ]);
-        onlineUsers.forEach(([usid, key]) => {
-            console.log(usid);
-            socket.broadcast.to(usid).emit('newConversation', newConvo, key);
+        const recipients = newConvo.participants.filter((p) => p.id !== user.uid);
+        recipients.map((r) => {
+            socket.to(r.id).emit('newConversation', newConvo, recipientKeyMap);
         });
         socket.to(newConvo.id).emit('newMessage', newConvo.id, seedMessage);
         socket.emit('newMessage', newConvo.id, seedMessage);
         socket.emit('conversationReceived', newConvo);
+        socket.join(newConvo.id);
         if (pnService) {
             await pnService.pushNewConvo(newConvo, user.uid);
         }
@@ -223,10 +211,42 @@ const removeEvent = (eid: string, scmService: ScheduledMessagesService) => {
     systemMessagingService.removeEvent(eid, scmService);
 };
 
-const handleKeyChange = (socket: Socket, cid: string, newPublicKey: string, userKeyMap: { [id: string]: string }) => {
+const handleKeyChange = async (
+    socket: Socket,
+    cid: string,
+    newPublicKey: string,
+    userKeyMap: { [id: string]: string },
+    pnService?: PushNotificationsService
+) => {
     Object.keys(userKeyMap).map((id) => {
         socket.to(id).emit('keyChange', cid, newPublicKey, userKeyMap[id]);
     });
+    if (pnService && socket.data.user.uid) {
+        const senderId = socket.data.user.uid;
+        const convo = await conversationsService.getConversationInfo(cid);
+        await pnService.pushNewSecrets(convo, senderId, newPublicKey, userKeyMap);
+    }
+};
+
+const deleteMessage = async (
+    socket: Socket,
+    cid: string,
+    mid: string,
+    pnService?: PushNotificationsService
+): Promise<void> => {
+    try {
+        await messagesService.deleteMessage(cid, mid);
+        socket.to(cid).emit('deleteMessage', cid, mid);
+        if (pnService) {
+            const senderId = socket.data.user.uid;
+            const convo = await conversationsService.getConversationInfo(cid);
+            await pnService.pushMessageDelete(convo, senderId, mid);
+        }
+        return;
+    } catch (err) {
+        console.log(err);
+        return;
+    }
 };
 
 const conversationsSocket = {
@@ -244,7 +264,8 @@ const conversationsSocket = {
     removePoll,
     initEvent,
     removeEvent,
-    handleKeyChange
+    handleKeyChange,
+    deleteMessage
 };
 
 export default conversationsSocket;

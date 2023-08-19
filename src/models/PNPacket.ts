@@ -1,4 +1,4 @@
-type PNType = 'message' | 'like' | 'newConvo' | 'addedToConvo';
+type PNType = 'message' | 'like' | 'newConvo' | 'addedToConvo' | 'secrets' | 'deleteMessage';
 
 type PNPacket = {
     type: PNType;

@@ -11,11 +11,7 @@ import {
 } from '../models';
 
 export const cleanUndefinedFields = (obj: any) => {
-    return Object.keys(obj).reduce((acc: any, key) => {
-        const _acc = acc;
-        if (obj[key] !== undefined) _acc[key] = obj[key];
-        return _acc;
-    }, {});
+    return Object.fromEntries(Object.entries(obj).filter(([k, v]) => v !== undefined)) as any;
 };
 
 export const getErrorMessage = (error: unknown) => {
@@ -27,6 +23,7 @@ export const parseRequestMessage = (message: any): Message => {
     if (typeof message.timestamp === 'string') {
         return {
             ...message,
+            delivered: true,
             timestamp: new Date(Date.parse(message.timestamp))
         };
     }

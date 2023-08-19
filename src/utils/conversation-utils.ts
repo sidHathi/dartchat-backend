@@ -1,4 +1,4 @@
-import { AvatarImage, Conversation, UserConversationProfile, UserData } from 'models';
+import { AvatarImage, ChatRole, Conversation, UserConversationProfile, UserData } from 'models';
 import { cleanUndefinedFields } from './request-utils';
 
 export const parseDBConvo = (convo: any): Conversation => {
@@ -14,7 +14,7 @@ export const parseDBConvo = (convo: any): Conversation => {
 };
 
 export const cleanConversation = (convo: Conversation): Conversation => {
-    if (convo.participants.length <= 2) {
+    if (!convo.group) {
         return cleanUndefinedFields({
             ...convo,
             avatar: undefined
@@ -44,4 +44,24 @@ export const getProfileForUser = (user: UserData, displayName?: string): UserCon
         notifications: 'all',
         publicKey: user.publicKey
     };
+};
+
+export const hasPermissionForAction = (
+    action: 'removeUser' | 'changeUserRole' | 'deleteForeignMessage',
+    actorRole?: ChatRole,
+    recipientRole?: ChatRole
+) => {
+    switch (action) {
+        case 'removeUser':
+            if (actorRole === 'admin') return true;
+            else if (recipientRole !== 'admin') return true;
+            return false;
+        case 'changeUserRole':
+            if (actorRole === 'admin') return true;
+            else if (recipientRole !== 'admin') return true;
+            return false;
+        case 'deleteForeignMessage':
+            if (actorRole === 'admin') return true;
+            return false;
+    }
 };

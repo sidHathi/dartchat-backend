@@ -26,7 +26,14 @@ app.get('/', (req, res, next) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    connectionStateRecovery: {
+        // the backup duration of the sessions and the packets
+        maxDisconnectionDuration: 2 * 60 * 1000,
+        // whether to skip middlewares upon successful recovery
+        skipMiddlewares: true
+    }
+});
 
 io.use(socketAuth).on('connection', (socket: Socket) => {
     socketsRouter(socket, io);

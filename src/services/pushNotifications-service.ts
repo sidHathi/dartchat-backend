@@ -18,6 +18,13 @@ export type PushNotificationsService = {
         newParticipants: UserConversationProfile[],
         userKeyMap?: { [id: string]: string }
     ) => Promise<void>;
+    pushNewSecrets: (
+        convo: Conversation,
+        senderId: string,
+        newPublicKey: string,
+        newKeyMap: { [id: string]: string }
+    ) => Promise<void>;
+    pushMessageDelete: (convo: Conversation, senderId: string, mid: string) => Promise<void>;
 };
 
 const pushNotificationsService: PushNotificationsService = {
@@ -212,6 +219,54 @@ const pushNotificationsService: PushNotificationsService = {
 
             console.log('sending convoAdd notification');
             console.log(notification);
+            await admin.messaging().sendEachForMulticast({
+                tokens: recipientTokens,
+                data
+            });
+            return;
+        } catch (err) {
+            console.log(err);
+            return;
+        }
+    },
+    async pushNewSecrets(convo, senderId, newPublicKey, newKeyMap) {
+        try {
+            const recipientIds = convo.participants.filter((p) => p.id !== senderId).map((p) => p.id);
+            const recipientTokens = await this.getRecipientTokens(recipientIds);
+
+            const data: PNPacket = {
+                type: 'secrets',
+                stringifiedBody: JSON.stringify({
+                    cid: convo.id,
+                    newPublicKey,
+                    newKeyMap
+                })
+            };
+
+            console.log('sending secrets notification');
+            await admin.messaging().sendEachForMulticast({
+                tokens: recipientTokens,
+                data
+            });
+            return;
+        } catch (err) {
+            console.log(err);
+            return;
+        }
+    },
+    async pushMessageDelete(convo: Conversation, senderId: string, mid: string) {
+        try {
+            const recipientIds = convo.participants.filter((p) => p.id !== senderId).map((p) => p.id);
+            const recipientTokens = await this.getRecipientTokens(recipientIds);
+
+            const data: PNPacket = {
+                type: 'deleteMessage',
+                stringifiedBody: JSON.stringify({
+                    cid: convo.id,
+                    mid
+                })
+            };
+
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
                 data

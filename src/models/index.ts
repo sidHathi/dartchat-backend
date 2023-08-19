@@ -5,7 +5,7 @@ import UserData, { DBUserData } from './UserData';
 import UserProfile from './UserProfile';
 import SocketEvent from './SocketEvent';
 import AvatarImage from './AvatarImage';
-import UserConversationProfile, { NotificationStatus } from './UserConversationProfile';
+import UserConversationProfile, { NotificationStatus, ChatRole } from './UserConversationProfile';
 import { Poll, CalendarEvent, LikeIcon } from './MessageObjects';
 import ScheduledMessage from './ScheduledMessage';
 import KeyInfo from './KeyInfo';
@@ -28,5 +28,6 @@ export {
     CalendarEvent,
     LikeIcon,
     ScheduledMessage,
-    KeyInfo
+    KeyInfo,
+    ChatRole
 };

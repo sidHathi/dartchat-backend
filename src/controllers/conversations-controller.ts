@@ -177,8 +177,9 @@ const addUsers: RequestHandler = async (req, res, next) => {
 const removeUser: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id as string;
+        const actorId = res.locals.uid;
         const uid = req.body.userId;
-        const deletionRes = await conversationsService.removeUser(cid, uid, false);
+        const deletionRes = await conversationsService.removeUser(cid, actorId, uid, false);
         res.status(200).send(deletionRes);
     } catch (err) {
         next(err);
@@ -216,7 +217,7 @@ const leaveConvo: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id as string;
         const uid = res.locals.uid;
-        const deletionRes = await conversationsService.removeUser(cid, uid, true);
+        const deletionRes = await conversationsService.removeUser(cid, uid, uid, true);
         res.status(200).send(deletionRes);
     } catch (err) {
         next(err);
@@ -395,6 +396,31 @@ const changeEncryptionKey: RequestHandler = async (req, res, next) => {
     }
 };
 
+const deleteMessage: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.cid;
+        const mid = req.params.mid;
+        const actorId = res.locals.uid;
+        const deletionRes = await messagesService.deleteMessage(cid, actorId, mid);
+        res.status(200).send(deletionRes);
+    } catch (err) {
+        next(err);
+    }
+};
+
+const updateUserRole: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.cid;
+        const actorId = res.locals.uid;
+        const uid = req.body.uid;
+        const newRole = req.body.newRole;
+        const updateRes = await conversationsService.changeConversationUserRole(cid, actorId, uid, newRole);
+        res.status(200).send(updateRes);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const conversationsController = {
     getConversation,
     getConversationInfo,
@@ -421,7 +447,9 @@ const conversationsController = {
     getConversationsInfo,
     getReencryptionData,
     pushReencryptedMessages,
-    changeEncryptionKey
+    changeEncryptionKey,
+    deleteMessage,
+    updateUserRole
 };
 
 export default conversationsController;

@@ -11,7 +11,7 @@ import {
 import { parseRequestMessage, parseDBMessage, cleanUndefinedFields } from '../utils/request-utils';
 import { getQueryForCursor, MessageCursor } from '../pagination';
 import { v4 as uuid } from 'uuid';
-import { cleanConversation } from 'utils/conversation-utils';
+import { cleanConversation, hasPermissionForAction } from 'utils/conversation-utils';
 import { DecryptedMessage, EncryptedMessage } from 'models/Message';
 import secretsService from './secrets-service';
 
@@ -311,7 +311,7 @@ const reencryptMessages = async (
         const messageUpdateDocs = await conversationsCol
             .doc(convo.id)
             .collection('messages')
-            .where('timestamp', '>', parsedMinDate)
+            .where('timestamp', '>=', parsedMinDate)
             .get();
         messageUpdateDocs.forEach((doc) => {
             console.log(doc);
@@ -345,6 +345,35 @@ const reencryptMessages = async (
     }
 };
 
+const deleteMessage = async (cid: string, actorId: string, mid: string) => {
+    try {
+        const currMessage = await getConversationMessage(cid, mid);
+        if (currMessage.messageType === 'system') return;
+        if (actorId !== currMessage.senderId) {
+            const convo = (await conversationsCol.doc(cid).get()).data() as Conversation;
+            const actorRole = convo.participants.find((p) => p.id === actorId)?.role;
+            const recipientRole = convo.participants.find((p) => p.id === currMessage.senderId)?.role;
+            if (!hasPermissionForAction('deleteForeignMessage', actorRole, recipientRole)) return;
+        }
+        const updatedMessage: DecryptedMessage = {
+            id: currMessage.id,
+            timestamp: currMessage.timestamp,
+            messageType: 'deletion',
+            encryptionLevel: 'none',
+            senderId: currMessage.senderId,
+            senderProfile: currMessage.senderProfile,
+            delivered: true,
+            content: 'Message deleted',
+            likes: []
+        };
+        await conversationsCol.doc(cid).collection('messages').doc(mid).set(cleanUndefinedFields(updatedMessage));
+        return true;
+    } catch (err) {
+        console.log(err);
+        return false;
+    }
+};
+
 const messagesService = {
     generateConversationInitMessage,
     handleUserConversationMessage,
@@ -357,7 +386,8 @@ const messagesService = {
     recordEventRsvp,
     getGalleryMessages,
     getLargeMessageList,
-    reencryptMessages
+    reencryptMessages,
+    deleteMessage
 };
 
 export default messagesService;

@@ -11,14 +11,20 @@ import {
     NotificationStatus,
     Poll,
     CalendarEvent,
-    LikeIcon
+    LikeIcon,
+    ChatRole
 } from '../models';
 import { chunk, cleanUndefinedFields } from '../utils/request-utils';
 import { FieldValue } from 'firebase-admin/firestore';
 import usersService from './users-service';
 import { MessageCursor, getQueryForCursor } from '../pagination';
 import { parseDBMessage } from '../utils/request-utils';
-import { cleanConversation, getUserConversationAvatar, parseDBConvo } from '../utils/conversation-utils';
+import {
+    cleanConversation,
+    getUserConversationAvatar,
+    hasPermissionForAction,
+    parseDBConvo
+} from '../utils/conversation-utils';
 import messagesService from './messages-service';
 import secretsService from './secrets-service';
 
@@ -207,13 +213,11 @@ const updateConversationPreviews = async (cid: string) => {
     try {
         const convoDoc = await conversationsCol.doc(cid).get();
         if (convoDoc.exists) {
-            const convo = cleanConversation(convoDoc.data() as Conversation);
-            const res = await Promise.all(
-                convo.participants.map(async (p) => {
-                    await usersService.updatePreviewDetails(convo, p.id);
-                })
-            );
-            return res;
+            const convo = parseDBConvo(convoDoc.data() as Conversation);
+            console.log(convo);
+            if (!convo.participants) return;
+            convo.participants.map(async (p: any) => usersService.updatePreviewDetails(convo, p.id));
+            return true;
         }
         return Promise.reject('no such conversation');
     } catch (err) {
@@ -264,9 +268,12 @@ const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
     }
 };
 
-const removeUser = async (cid: string, uid: string, archive: boolean) => {
+const removeUser = async (cid: string, actorId: string, uid: string, archive: boolean) => {
     try {
         const convo = await getConversationInfo(cid);
+        const actorRole = convo.participants.find((p) => p.id === actorId)?.role;
+        const recipientRole = convo.participants.find((p) => p.id === uid)?.role;
+        if (!hasPermissionForAction('removeUser', actorRole, recipientRole)) return;
         const updatedParticipants = convo.participants.filter((p) => p.id !== uid).map((p) => cleanUndefinedFields(p));
         const res = await conversationsCol.doc(cid).update({
             participants: updatedParticipants || []
@@ -397,6 +404,31 @@ const getConversationsInfo = async (cids: string[]) => {
     }
 };
 
+const changeConversationUserRole = async (cid: string, actorId: string, uid: string, newRole: ChatRole) => {
+    try {
+        const convo = await getConversationInfo(cid);
+        if (!convo) return;
+        const actorRole = convo.participants.find((p) => p.id === actorId)?.role;
+        const recipientRole = convo.participants.find((p) => p.id === uid)?.role;
+        if (!hasPermissionForAction('changeUserRole', actorRole, recipientRole)) return;
+        const newParticipants = convo.participants.map((p) => {
+            if (p.id === uid)
+                return {
+                    ...p,
+                    role: newRole
+                } as UserConversationProfile;
+            return p;
+        });
+        if (newParticipants.length === 0) return;
+        const updateRes = await conversationsCol.doc(cid).update({
+            participants: cleanUndefinedFields(newParticipants)
+        });
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
 const conversationsService = {
     createNewConversation,
     getConversationInfo,
@@ -418,7 +450,8 @@ const conversationsService = {
     getEvent,
     changeLikeIcon,
     resetLikeIcon,
-    getConversationsInfo
+    getConversationsInfo,
+    changeConversationUserRole
 };
 
 export default conversationsService;
