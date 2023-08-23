@@ -12,6 +12,7 @@ type UserConversationProfile = {
     notifications?: NotificationStatus;
     publicKey?: string;
     role?: ChatRole;
+    customProfile?: boolean;
 };
 
 export default UserConversationProfile;

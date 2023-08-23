@@ -11,7 +11,7 @@ import {
 import { parseRequestMessage, parseDBMessage, cleanUndefinedFields } from '../utils/request-utils';
 import { getQueryForCursor, MessageCursor } from '../pagination';
 import { v4 as uuid } from 'uuid';
-import { cleanConversation, hasPermissionForAction } from 'utils/conversation-utils';
+import { cleanConversation, hasPermissionForAction } from '../utils/conversation-utils';
 import { DecryptedMessage, EncryptedMessage } from 'models/Message';
 import secretsService from './secrets-service';
 

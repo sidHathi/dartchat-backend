@@ -1,13 +1,15 @@
-import { AvatarImage, ChatRole, Conversation, UserConversationProfile, UserData } from 'models';
+import { AvatarImage, ChatRole, Conversation, UserConversationProfile, UserData } from '../models';
 import { cleanUndefinedFields } from './request-utils';
 
 export const parseDBConvo = (convo: any): Conversation => {
+    const safeConvo = cleanUndefinedFields(convo);
+    if (!safeConvo || safeConvo.keyInfo) return convo;
     return cleanConversation({
-        ...convo,
-        keyInfo: convo.keyInfo
+        ...safeConvo,
+        keyInfo: safeConvo.keyInfo
             ? {
-                  ...convo.keyInfo,
-                  createdAt: convo.keyInfo.createdAt.toDate()
+                  ...safeConvo.keyInfo,
+                  createdAt: safeConvo.keyInfo.createdAt.toDate()
               }
             : undefined
     }) as Conversation;

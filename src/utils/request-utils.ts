@@ -11,6 +11,7 @@ import {
 } from '../models';
 
 export const cleanUndefinedFields = (obj: any) => {
+    if (!obj) return obj;
     return Object.fromEntries(Object.entries(obj).filter(([k, v]) => v !== undefined)) as any;
 };
 

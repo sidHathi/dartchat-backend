@@ -12,6 +12,7 @@ export type Poll = {
     }[];
     expirationDate: Date;
     messageId?: string;
+    messageLink?: string;
 };
 
 export type CalendarEvent = {
@@ -21,6 +22,7 @@ export type CalendarEvent = {
     reminders: Date[];
     going: string[];
     notGoing: string[];
+    messageLink?: string;
 };
 
 export type ObjectRef = {

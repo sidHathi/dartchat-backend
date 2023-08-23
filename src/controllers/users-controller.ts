@@ -37,12 +37,12 @@ const createNewUser: RequestHandler = async (req, res, next) => {
 
 const modifyCurrentUser: RequestHandler = async (req, res, next) => {
     try {
-        // use with auth
         const userId = res.locals?.uid;
-        // TEMPORARY:
-        // const userId = 'test';
         const body = req.body as UserData;
         const userRes = await usersService.updateUser(userId, body);
+        if ('avatar' in body || 'displayName' in body) {
+            await usersService.updateConversationsForNewUserDetails(userRes);
+        }
         res.status(200).send(userRes);
     } catch (err) {
         if (getErrorMessage(err) === 'Handle taken') {

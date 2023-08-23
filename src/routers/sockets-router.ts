@@ -1,4 +1,4 @@
-import { CalendarEvent, Conversation, Message, Poll, SocketEvent, UserConversationProfile } from '../models';
+import { CalendarEvent, ChatRole, Conversation, Message, Poll, SocketEvent, UserConversationProfile } from '../models';
 import { Server, Socket } from 'socket.io';
 import { messagesSocket, userSocket, conversationsSocket } from '../sockets';
 import {
@@ -62,7 +62,7 @@ const socketsRouter = (socket: Socket, server: Server) => {
     socket.on(
         'newConversationUsers',
         (cid: string, profiles: UserConversationProfile[], userKeyMap?: { [id: string]: string }) =>
-            conversationsSocket.newParticipants(socket, cid, profiles, userSocketMap)
+            conversationsSocket.newParticipants(socket, cid, profiles, userSocketMap, userKeyMap, pnService)
     );
 
     socket.on('removeConversationUser', (cid: string, profile: UserConversationProfile) =>
@@ -91,6 +91,10 @@ const socketsRouter = (socket: Socket, server: Server) => {
 
     socket.on('deleteMessage', (cid: string, mid: string) =>
         conversationsSocket.deleteMessage(socket, cid, mid, pnService)
+    );
+
+    socket.on('userRoleChanged', (cid: string, uid: string, newRole: ChatRole) =>
+        conversationsSocket.handleUserRoleChanged(socket, cid, uid, newRole, pnService)
     );
 
     socket.on('forceDisconnect', () => {

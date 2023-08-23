@@ -25,6 +25,7 @@ type MessageBase = {
     delivered?: boolean;
     mentions?: UserConversationProfile[];
     replyRef?: ReplyRef;
+    messageLink?: string;
 };
 
 export type DecryptedMessage = MessageBase & {

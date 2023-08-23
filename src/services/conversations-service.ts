@@ -53,6 +53,7 @@ const getConversationInfo = async (cid: string): Promise<Conversation | never> =
     try {
         const convoDoc = await conversationsCol.doc(cid).get();
         const convo = parseDBConvo(convoDoc.data() as Conversation);
+        if (!convo) return Promise.reject('no such convo');
         if (!convo.keyInfo) {
             convo.keyInfo = await secretsService.addKeyInfo(convo);
         }
@@ -73,7 +74,8 @@ const addUsersToNewConversation = async (newConversation: Conversation) => {
                 lastMessageTime: new Date(),
                 avatar: getUserConversationAvatar(newConversation, participant.id),
                 group: newConversation.group,
-                publicKey: newConversation.publicKey
+                publicKey: newConversation.publicKey,
+                userRole: participant.role
             };
             if (!newConversation.group) {
                 const otherParticipant = newConversation.participants.filter((p) => p.id !== participant.id)[0];
@@ -172,7 +174,10 @@ const updateConversationProfile = async (cid: string, newProfile: UserProfile) =
         const convo = await getConversationInfo(cid);
         const newParticipants = [
             ...convo.participants.filter((p) => p.id !== newProfile.id).map((p) => cleanUndefinedFields(p)),
-            cleanUndefinedFields(newProfile)
+            cleanUndefinedFields({
+                ...newProfile,
+                customProfile: true
+            })
         ];
         const res = await conversationsCol.doc(cid).update({
             participants: cleanUndefinedFields(newParticipants)
@@ -248,14 +253,30 @@ const updateUserNotStatus = async (cid: string, uid: string, newStatus: Notifica
 
 const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
     try {
+        const initialConvo = await getConversationInfo(cid);
+        const correctlyPermissionedProfiles = profiles.map((p) => {
+            const isAdmin = initialConvo.adminIds?.includes(p.id);
+            if (p.role === 'admin' && !isAdmin) {
+                return cleanUndefinedFields({
+                    ...p,
+                    role: 'plebian'
+                }) as UserConversationProfile;
+            } else if (p.role !== 'admin' && isAdmin) {
+                return cleanUndefinedFields({
+                    ...p,
+                    role: 'admin'
+                }) as UserConversationProfile;
+            }
+            return cleanUndefinedFields(p) as UserConversationProfile;
+        });
         const res = await conversationsCol.doc(cid).update({
-            participants: FieldValue.arrayUnion(...profiles.map((p) => cleanUndefinedFields(p)))
+            participants: FieldValue.arrayUnion(...correctlyPermissionedProfiles)
         });
         if (res) {
             const updatedConvo = await getConversationInfo(cid);
             const pids = updatedConvo.participants.map((p) => p.id);
             await Promise.all(
-                profiles.map(async (profile) => {
+                correctlyPermissionedProfiles.map(async (profile) => {
                     await usersService.handleConversationAdd(updatedConvo, profile.id);
                     await usersService.addIdArrToContacts(pids, profile.id);
                     await usersService.removeConvoFromArchive(cid, profile.id);
@@ -412,16 +433,24 @@ const changeConversationUserRole = async (cid: string, actorId: string, uid: str
         const recipientRole = convo.participants.find((p) => p.id === uid)?.role;
         if (!hasPermissionForAction('changeUserRole', actorRole, recipientRole)) return;
         const newParticipants = convo.participants.map((p) => {
-            if (p.id === uid)
+            if (p.id === uid) {
                 return {
                     ...p,
                     role: newRole
                 } as UserConversationProfile;
+            }
             return p;
         });
         if (newParticipants.length === 0) return;
+        let newAdminList = convo.adminIds || [];
+        if (newRole === 'admin') {
+            newAdminList = [...newAdminList, uid];
+        } else {
+            newAdminList = newAdminList.filter((id) => id !== uid);
+        }
         const updateRes = await conversationsCol.doc(cid).update({
-            participants: cleanUndefinedFields(newParticipants)
+            participants: newParticipants || [],
+            adminIds: newAdminList || []
         });
         return updateRes;
     } catch (err) {

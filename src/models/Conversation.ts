@@ -7,16 +7,17 @@ import KeyInfo from './KeyInfo';
 type Conversation = {
     id: string;
     name: string;
-    avatar?: AvatarImage;
     settings: any;
     messages: Message[];
     group: boolean;
     participants: UserConversationProfile[];
+    avatar?: AvatarImage;
     polls?: Poll[];
     events?: CalendarEvent[];
     customLikeIcon?: LikeIcon;
     publicKey?: string;
     keyInfo?: KeyInfo;
+    adminIds?: string[];
 };
 
 export default Conversation;

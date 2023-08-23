@@ -1,6 +1,6 @@
 import Conversation from './Conversation';
 import ConversationPreview, { DBConversationPreview } from './ConversationPreview';
-import Message, { DBMessage, RawMessage } from './Message';
+import Message, { DBMessage, RawMessage, DecryptedMessage, EncryptedMessage } from './Message';
 import UserData, { DBUserData } from './UserData';
 import UserProfile from './UserProfile';
 import SocketEvent from './SocketEvent';
@@ -29,5 +29,7 @@ export {
     LikeIcon,
     ScheduledMessage,
     KeyInfo,
-    ChatRole
+    ChatRole,
+    DecryptedMessage,
+    EncryptedMessage
 };

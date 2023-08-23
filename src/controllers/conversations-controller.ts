@@ -414,8 +414,9 @@ const updateUserRole: RequestHandler = async (req, res, next) => {
         const actorId = res.locals.uid;
         const uid = req.body.uid;
         const newRole = req.body.newRole;
-        const updateRes = await conversationsService.changeConversationUserRole(cid, actorId, uid, newRole);
-        res.status(200).send(updateRes);
+        const convoUpdate = await conversationsService.changeConversationUserRole(cid, actorId, uid, newRole);
+        await usersService.updatePreviewRole(uid, cid, newRole);
+        res.status(200).send(convoUpdate);
     } catch (err) {
         next(err);
     }

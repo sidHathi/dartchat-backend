@@ -1,8 +1,9 @@
 import usersService from './users-service';
 import conversationsService from './conversations-service';
-import { Conversation, Message, UserData, SocketEvent, UserConversationProfile } from '../models';
+import { Conversation, Message, UserData, SocketEvent, UserConversationProfile, ChatRole } from '../models';
 import admin from '../firebase';
 import PNPacket from 'models/PNPacket';
+import { DecryptedMessage } from 'models/Message';
 
 export type PushNotificationsService = {
     handledEvents: Set<string> | null;
@@ -25,6 +26,9 @@ export type PushNotificationsService = {
         newKeyMap: { [id: string]: string }
     ) => Promise<void>;
     pushMessageDelete: (convo: Conversation, senderId: string, mid: string) => Promise<void>;
+    // TODO: newDetails push + role change push
+    pushSystemMessage: (convo: Conversation, message: DecryptedMessage) => Promise<void>;
+    pushRoleChange: (cid: string, uid: string, newRole: ChatRole) => Promise<void>;
 };
 
 const pushNotificationsService: PushNotificationsService = {
@@ -272,6 +276,49 @@ const pushNotificationsService: PushNotificationsService = {
                 data
             });
             return;
+        } catch (err) {
+            console.log(err);
+            return;
+        }
+    },
+    async pushSystemMessage(convo, message) {
+        try {
+            const recipientIds = convo.participants.map((p) => p.id);
+            const recipientTokens = await this.getRecipientTokens(recipientIds);
+
+            const data: PNPacket = {
+                type: 'message',
+                stringifiedBody: JSON.stringify({
+                    cid: convo.id,
+                    message
+                })
+            };
+
+            await admin.messaging().sendEachForMulticast({
+                tokens: recipientTokens,
+                data
+            });
+        } catch (err) {
+            console.log(err);
+            return;
+        }
+    },
+    async pushRoleChange(cid, uid, newRole) {
+        try {
+            const recipients = await this.getRecipientTokens([uid]);
+
+            const data: PNPacket = {
+                type: 'roleChanged',
+                stringifiedBody: JSON.stringify({
+                    cid,
+                    newRole
+                })
+            };
+
+            await admin.messaging().sendEachForMulticast({
+                tokens: recipients,
+                data
+            });
         } catch (err) {
             console.log(err);
             return;

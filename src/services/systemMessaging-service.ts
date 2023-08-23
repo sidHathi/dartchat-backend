@@ -1,10 +1,20 @@
-import { CalendarEvent, Conversation, Message, Poll, UserConversationProfile, UserData } from '../models';
+import {
+    CalendarEvent,
+    ChatRole,
+    Conversation,
+    Message,
+    Poll,
+    UserConversationProfile,
+    UserData,
+    DecryptedMessage
+} from '../models';
 import messagesService from './messages-service';
 import { Socket } from 'socket.io';
 import { v4 as uuid } from 'uuid';
 import { ScheduledMessagesService } from './scheduledMessages-service';
+import { PushNotificationsService } from './pushNotifications-service';
 
-const genSystemMessage = (content: string, refId?: string): Message => {
+const genSystemMessage = (content: string, refId?: string, link?: string): Message => {
     return {
         timestamp: new Date(),
         messageType: 'system',
@@ -16,12 +26,20 @@ const genSystemMessage = (content: string, refId?: string): Message => {
     };
 };
 
-const sendSystemMessage = async (message: Message, cid: string, socket?: Socket) => {
+const sendSystemMessage = async (
+    message: Message,
+    convo: Conversation,
+    socket?: Socket,
+    pnService?: PushNotificationsService
+) => {
     try {
-        const res = await messagesService.storeNewMessage(cid, message);
+        const res = await messagesService.storeNewMessage(convo.id, message);
         if (socket) {
-            socket.to(cid).emit('newMessage', cid, message);
-            socket.emit('newMessage', cid, message);
+            socket.to(convo.id).emit('newMessage', convo.id, message);
+            socket.emit('newMessage', convo.id, message);
+        }
+        if (pnService) {
+            await pnService.pushSystemMessage(convo, message as DecryptedMessage);
         }
         return res;
     } catch (err) {
@@ -30,9 +48,13 @@ const sendSystemMessage = async (message: Message, cid: string, socket?: Socket)
     }
 };
 
-const getEventReminderMessage = (eid: string, eventName: string, reminderTime: string) => {
+const getEventReminderMessage = (eid: string, eventName: string, reminderTime: string, link?: string) => {
     // this should be basic -> just add the reminder message to the chat
-    const message: Message = genSystemMessage(`${eventName} is starting ${reminderTime}`, `${eid}-${reminderTime}`);
+    const message: Message = genSystemMessage(
+        `${eventName} is starting ${reminderTime}`,
+        `${eid}-${reminderTime}`,
+        link
+    );
     return message;
 };
 
@@ -54,11 +76,12 @@ const getTimeStringForReminder = (reminderDate: Date, eventDate: Date) => {
 };
 
 const sendEventResponse = async (
-    cid: string,
+    convo: Conversation,
     event: CalendarEvent,
     response: string,
     user: UserData,
-    socket?: Socket
+    socket?: Socket,
+    pnService?: PushNotificationsService
 ) => {
     // also basic -> just log a user's response to an event
     let content: string | undefined = undefined;
@@ -75,15 +98,15 @@ const sendEventResponse = async (
             content = `${userName} is undecided about ${eventName}`;
             break;
     }
-    const message = genSystemMessage(content);
-    await sendSystemMessage(message, cid, socket);
+    const message = genSystemMessage(content, undefined, event.messageLink);
+    await sendSystemMessage(message, convo, socket);
     return;
 };
 
-const scheduleEvent = (cid: string, event: CalendarEvent, scmService: ScheduledMessagesService) => {
+const scheduleEvent = (cid: string, event: CalendarEvent, scmService: ScheduledMessagesService, link?: string) => {
     // this should implement the above functions with node Cron
     event.reminders.map((time: Date) => {
-        const message = getEventReminderMessage(event.id, event.name, getTimeStringForReminder(time, event.date));
+        const message = getEventReminderMessage(event.id, event.name, getTimeStringForReminder(time, event.date), link);
         scmService.addMessage(cid, message, time);
     });
     return;
@@ -101,7 +124,7 @@ const removeEvent = (eid: string, scmService: ScheduledMessagesService) => {
 };
 
 const getPollCompletionMessage = (poll: Poll) => {
-    return genSystemMessage(`Poll: ${poll.question} has expired`);
+    return genSystemMessage(`Poll: ${poll.question} has expired`, undefined, poll.messageLink);
 };
 
 const schedulePoll = (cid: string, poll: Poll, scmService: ScheduledMessagesService) => {
@@ -122,12 +145,12 @@ const removePoll = (pid: string, scmService: ScheduledMessagesService) => {
 
 const handleUserLeaves = async (convo: Conversation, profile: UserConversationProfile, socket?: Socket) => {
     const message = genSystemMessage(`${profile.displayName} left the group`);
-    await sendSystemMessage(message, convo.id, socket);
+    await sendSystemMessage(message, convo, socket);
 };
 
-const handleUserJoins = async (cid: string, profile: UserConversationProfile, socket?: Socket) => {
+const handleUserJoins = async (convo: Conversation, profile: UserConversationProfile, socket?: Socket) => {
     const message = genSystemMessage(`${profile.displayName} joined the group`);
-    await sendSystemMessage(message, cid, socket);
+    await sendSystemMessage(message, convo, socket);
 };
 
 const handleUserRemoved = async (
@@ -139,7 +162,7 @@ const handleUserRemoved = async (
     const senderMatch = convo.participants.find((p) => p.id === senderId);
     if (senderMatch) {
         const message = genSystemMessage(`${senderMatch.displayName} removed ${profile.displayName} from the group`);
-        await sendSystemMessage(message, convo.id, socket);
+        await sendSystemMessage(message, convo, socket);
     }
 };
 
@@ -148,7 +171,7 @@ const handleUserAdded = async (convo: Conversation, uid: string, senderId: strin
     const senderMatch = convo.participants.find((p) => p.id === senderId);
     if (userMatch && senderMatch) {
         const message = genSystemMessage(`${senderMatch.displayName} added ${userMatch.displayName} to the group`);
-        await sendSystemMessage(message, convo.id, socket);
+        await sendSystemMessage(message, convo, socket);
     }
 };
 
@@ -156,7 +179,7 @@ const handleChatAvatarChanged = async (convo: Conversation, uid: string, socket?
     const userMatch = convo.participants.find((p) => p.id === uid);
     if (userMatch) {
         const message = genSystemMessage(`${userMatch.displayName} changed the group avatar`);
-        await sendSystemMessage(message, convo.id, socket);
+        await sendSystemMessage(message, convo, socket);
     }
 };
 
@@ -164,7 +187,29 @@ const handleChatNameChanged = async (convo: Conversation, uid: string, newName: 
     const userMatch = convo.participants.find((p) => p.id === uid);
     if (userMatch) {
         const message = genSystemMessage(`${userMatch.displayName} changed the group name to "${newName}"`);
-        await sendSystemMessage(message, convo.id, socket);
+        await sendSystemMessage(message, convo, socket);
+    }
+};
+
+const handleUserRoleChanged = async (
+    convo: Conversation,
+    actorId: string,
+    uid: string,
+    newRole: ChatRole,
+    socket?: Socket
+) => {
+    const actorMatch = convo.participants.find((p) => p.id === actorId);
+    const userMatch = convo.participants.find((p) => p.id === uid);
+    if (userMatch && actorMatch) {
+        if (newRole === 'admin') {
+            const message = genSystemMessage(`${actorMatch.displayName} made ${userMatch.displayName} a group admin`);
+            await sendSystemMessage(message, convo, socket);
+        } else {
+            const message = genSystemMessage(
+                `${actorMatch.displayName} removed ${userMatch.displayName}'s admin status`
+            );
+            await sendSystemMessage(message, convo, socket);
+        }
     }
 };
 
@@ -179,7 +224,8 @@ const systemMessagingService = {
     handleUserRemoved,
     handleUserAdded,
     handleChatAvatarChanged,
-    handleChatNameChanged
+    handleChatNameChanged,
+    handleUserRoleChanged
 };
 
 export default systemMessagingService;

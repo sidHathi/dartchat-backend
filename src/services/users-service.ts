@@ -1,11 +1,13 @@
 import { db } from '../firebase';
-import { DBUserData, UserData, Conversation, ConversationPreview, NotificationStatus } from '../models';
+import { DBUserData, UserData, Conversation, ConversationPreview, ChatRole, UserConversationProfile } from '../models';
 import profileService from './profiles-service';
 import { chunk, cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { Socket } from 'socket.io';
 import { FieldValue } from 'firebase-admin/firestore';
+import { parseDBConvo } from '../utils/conversation-utils';
 
 const usersCol = db.collection('users');
+const conversationsCol = db.collection('conversations');
 
 const getUser = async (userId: string): Promise<UserData | never> => {
     try {
@@ -67,7 +69,7 @@ const updateUser = async (userId: string, updatedUserDetails: UserData): Promise
         const updatedUser: UserData = {
             ...currUser,
             ...updatedUserDetails,
-            conversations: currUser.conversations,
+            conversations: currUser.conversations.map((c) => cleanUndefinedFields(c)),
             id: currUser.id
         };
         if (currUser?.handle !== updatedUserDetails.handle && !(await checkValidHandle(updatedUser))) {
@@ -93,7 +95,7 @@ const getSocketUser = async (socket: Socket): Promise<UserData | never> => {
     }
 };
 
-const checkValidHandle = async (userData: UserData, userId?: string): Promise<boolean | never> => {
+const checkValidHandle = async (userData: UserData): Promise<boolean | never> => {
     try {
         if (!userData.handle) return false;
         const matchingHandles = await usersCol.where('handle', '==', userData.handle).get();
@@ -205,7 +207,7 @@ const handleLeaveConversation = async (cid: string, userId: string) => {
 const handleConversationAdd = async (convo: Conversation, userId: string) => {
     try {
         const user = await getUser(userId);
-        const previews = user.conversations.map((p) => cleanUndefinedFields(p));
+        const previews = user.conversations.filter((c) => c.cid !== convo.id).map((p) => cleanUndefinedFields(p));
         const newPreview = cleanUndefinedFields({
             cid: convo.id,
             name: convo.name,
@@ -276,7 +278,7 @@ const removeConvoFromArchive = async (convoId: string, uid: string) => {
         const currUser = await getUser(uid);
         if (currUser.archivedConvos && currUser.archivedConvos.includes(convoId)) {
             const updateRes = await usersCol.doc(uid).update({
-                archivedConvos: currUser.archivedConvos.filter((c) => c !== convoId).map((c) => cleanUndefinedFields(c))
+                archivedConvos: currUser.archivedConvos.filter((c) => c !== convoId)
             });
             return updateRes;
         }
@@ -297,6 +299,86 @@ const setUserPublicKey = async (uid: string, publicKey: string) => {
     }
 };
 
+const updatePreviewRole = async (uid: string, cid: string, newRole: ChatRole) => {
+    try {
+        const user = await getUser(uid);
+        const updatedPreviews = user.conversations.map((c) => {
+            if (c.cid === cid) {
+                return cleanUndefinedFields({
+                    ...c,
+                    userRole: newRole
+                });
+            }
+            return cleanUndefinedFields(c);
+        });
+        if (updatePreviewDetails.length === 0) return;
+        const updateRes = await usersCol.doc(uid).update(
+            cleanUndefinedFields({
+                conversations: updatedPreviews
+            })
+        );
+        return updateRes;
+    } catch (err) {
+        return Promise.reject(err);
+    }
+};
+
+const updateConversationsForNewUserDetails = async (userData: UserData) => {
+    try {
+        const updateBatch = db.batch();
+        await Promise.all(
+            userData.conversations.map(async (c) => {
+                const convoDoc = await conversationsCol.doc(c.cid).get();
+                const convo = parseDBConvo(convoDoc.data());
+                const existingProfile = convo.participants.find((p) => p.id === userData.id);
+                if (existingProfile && !existingProfile.customProfile) {
+                    const newProfile = {
+                        ...existingProfile,
+                        avatar: userData.avatar || existingProfile.avatar,
+                        displayName: userData.displayName || existingProfile.displayName
+                    } as UserConversationProfile;
+                    const updatedParticipants = convo.participants.map((p) => {
+                        if (p.id === userData.id) return cleanUndefinedFields(newProfile);
+                        return cleanUndefinedFields(p);
+                    });
+                    updateBatch.update(convoDoc.ref, {
+                        participants: updatedParticipants
+                    });
+                }
+
+                if (!c.group) {
+                    const recipientProfile = convo.participants.find((p) => p.id !== userData.id);
+                    if (recipientProfile) {
+                        const recipientDoc = await usersCol.doc(recipientProfile.id).get();
+                        const recipientData = parseDBUserData(recipientDoc.data() as DBUserData);
+                        if (!recipientData) return;
+                        const existingPreview = recipientData.conversations.find((rc) => rc.cid === c.cid);
+                        if (existingPreview) {
+                            const updatedPreview = {
+                                ...existingPreview,
+                                name: userData.displayName || userData.handle || existingPreview.name,
+                                avatar: userData.avatar || existingPreview?.name
+                            };
+                            updateBatch.update(recipientDoc.ref, {
+                                conversations: recipientData.conversations.map((rc) => {
+                                    if (rc.cid === c.cid) {
+                                        return cleanUndefinedFields(updatedPreview);
+                                    }
+                                    return cleanUndefinedFields(rc);
+                                })
+                            });
+                        }
+                    }
+                }
+            })
+        );
+        await updateBatch.commit();
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+};
+
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -312,7 +394,9 @@ const usersService = {
     addConvoToArchive,
     addIdArrToContacts,
     removeConvoFromArchive,
-    setUserPublicKey
+    setUserPublicKey,
+    updatePreviewRole,
+    updateConversationsForNewUserDetails
 };
 
 export default usersService;

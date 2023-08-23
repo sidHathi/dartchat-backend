@@ -1,5 +1,5 @@
 import { Socket } from 'socket.io';
-import { Conversation, UserConversationProfile, Message, Poll, CalendarEvent } from '../models';
+import { Conversation, UserConversationProfile, Message, Poll, CalendarEvent, ChatRole } from '../models';
 import {
     conversationsService,
     messagesService,
@@ -132,7 +132,7 @@ const newParticipants = async (
                     secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
                 }
             } else {
-                await systemMessagingService.handleUserJoins(convo.id, p, socket);
+                await systemMessagingService.handleUserJoins(convo, p, socket);
             }
         })
     );
@@ -185,7 +185,7 @@ const handleEventRsvp = async (socket: Socket, cid: string, eid: string, respons
         const updateRes = await conversationsService.recordEventRsvp(cid, eid, uid, response);
         if (updateRes) {
             console.log(response);
-            await systemMessagingService.sendEventResponse(cid, event, response, user, socket);
+            await systemMessagingService.sendEventResponse(convo, event, response, user, socket);
         }
         if (updateRes) {
             socket.to(cid).emit('eventRsvp', cid, eid, uid, response);
@@ -235,7 +235,8 @@ const deleteMessage = async (
     pnService?: PushNotificationsService
 ): Promise<void> => {
     try {
-        await messagesService.deleteMessage(cid, mid);
+        const actorId = socket.data.user.uid;
+        await messagesService.deleteMessage(cid, actorId, mid);
         socket.to(cid).emit('deleteMessage', cid, mid);
         if (pnService) {
             const senderId = socket.data.user.uid;
@@ -246,6 +247,24 @@ const deleteMessage = async (
     } catch (err) {
         console.log(err);
         return;
+    }
+};
+
+const handleUserRoleChanged = async (
+    socket: Socket,
+    cid: string,
+    uid: string,
+    newRole: ChatRole,
+    pnService?: PushNotificationsService
+): Promise<void> => {
+    try {
+        const convo = await conversationsService.getConversationInfo(cid);
+        const actorId = socket.data.user.uid;
+        await systemMessagingService.handleUserRoleChanged(convo, actorId, uid, newRole, socket);
+        socket.to(cid).emit('userRoleChanged', cid, uid, newRole);
+        pnService && pnService.pushRoleChange(cid, uid, newRole);
+    } catch (err) {
+        console.log(err);
     }
 };
 
@@ -265,7 +284,8 @@ const conversationsSocket = {
     initEvent,
     removeEvent,
     handleKeyChange,
-    deleteMessage
+    deleteMessage,
+    handleUserRoleChanged
 };
 
 export default conversationsSocket;

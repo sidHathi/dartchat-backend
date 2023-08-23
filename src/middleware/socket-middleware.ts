@@ -14,6 +14,7 @@ const socketAuth = async (socket: Socket, next: (err?: Error) => void) => {
         next();
     } catch (err) {
         console.log('socket auth failed');
+        socket.emit('authFailure');
         socket.disconnect(true);
         next(new Error('unauthorized'));
     }
