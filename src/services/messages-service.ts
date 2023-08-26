@@ -47,47 +47,52 @@ const handleUserConversationMessage = async (
     participantIds: string[],
     message: Message
 ) => {
-    participantIds.map(async (id) => {
-        const userDoc = await usersCol.doc(id).get();
-        if (userDoc.exists) {
-            const user = userDoc.data() as UserData;
-            let unSeenMessages = 0;
-            const matchingConvos = user.conversations.filter((c) => c.cid === cid);
-            let avatar: AvatarImage | undefined = undefined;
-            let name = cName;
-            let recipientId: string | undefined = undefined;
-            if (matchingConvos.length > 0) {
-                unSeenMessages = matchingConvos[0].unSeenMessages;
-                avatar = matchingConvos[0].avatar;
-                if (!group) {
-                    name = matchingConvos[0].name;
-                    recipientId = matchingConvos[0].recipientId;
+    try {
+        participantIds.map(async (id) => {
+            const userDoc = await usersCol.doc(id).get();
+            if (userDoc.exists) {
+                const user = userDoc.data() as UserData;
+                let unSeenMessages = 0;
+                const matchingConvos = user.conversations.filter((c) => c.cid === cid);
+                let avatar: AvatarImage | undefined = undefined;
+                let name = cName;
+                let recipientId: string | undefined = undefined;
+                if (matchingConvos.length > 0) {
+                    unSeenMessages = matchingConvos[0].unSeenMessages;
+                    avatar = matchingConvos[0].avatar;
+                    if (!group) {
+                        name = matchingConvos[0].name;
+                        recipientId = matchingConvos[0].recipientId;
+                    }
+                } else {
+                    return;
                 }
-            } else {
-                return;
+                const lastMessageContent =
+                    'encryptedFields' in message
+                        ? (message as EncryptedMessage).encryptedFields
+                        : (message as DecryptedMessage).content;
+                usersCol.doc(id).update({
+                    conversations: [
+                        ...user.conversations.filter((c) => c.cid !== cid),
+                        cleanUndefinedFields({
+                            ...matchingConvos[0],
+                            cid: cid,
+                            name,
+                            avatar,
+                            unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
+                            lastMessageTime: message.timestamp,
+                            lastMessageContent,
+                            lastMessage: message,
+                            recipientId
+                        } as ConversationPreview)
+                    ]
+                });
             }
-            const lastMessageContent =
-                'encryptedFields' in message
-                    ? (message as EncryptedMessage).encryptedFields
-                    : (message as DecryptedMessage).content;
-            usersCol.doc(id).update({
-                conversations: [
-                    ...user.conversations.filter((c) => c.cid !== cid),
-                    cleanUndefinedFields({
-                        ...matchingConvos[0],
-                        cid: cid,
-                        name,
-                        avatar,
-                        unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
-                        lastMessageTime: message.timestamp,
-                        lastMessageContent,
-                        lastMessage: message,
-                        recipientId
-                    } as ConversationPreview)
-                ]
-            });
-        }
-    });
+        });
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
 };
 
 const storeNewMessage = async (cid: string, message: Message) => {

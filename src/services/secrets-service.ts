@@ -17,20 +17,21 @@ const conversationsCol = db.collection('conversations');
 
 const handleKeyUpdateReceipt = async (user: UserData, cids: string[]) => {
     try {
-        const updatedUserConvos = user.conversations.map((c) => {
-            if (cids.includes(c.cid)) {
-                const { keyUpdate, ...preview } = c;
-                return cleanUndefinedFields(preview);
-            }
-            return cleanUndefinedFields(c);
-        });
-        const updateRes = await usersCol.doc(user.id).update({
-            conversations: updatedUserConvos
-        });
-        if (updateRes) {
-            return true;
-        }
-        return false;
+        return true;
+        // const updatedUserConvos = user.conversations.map((c) => {
+        //     if (cids.includes(c.cid)) {
+        //         const { keyUpdate, ...preview } = c;
+        //         return cleanUndefinedFields(preview);
+        //     }
+        //     return cleanUndefinedFields(c);
+        // });
+        // const updateRes = await usersCol.doc(user.id).update({
+        //     conversations: updatedUserConvos
+        // });
+        // if (updateRes) {
+        //     return true;
+        // }
+        // return false;
     } catch (err) {
         console.log(err);
         return false;
@@ -62,7 +63,8 @@ const setUserSecrets = async (uid: string, secrets: string) => {
 const performKeyUpdate = async (
     cid: string,
     users: UserConversationProfile[],
-    userKeyMap: { [id: string]: string }
+    userKeyMap: { [id: string]: string },
+    newPublicKey: string
 ) => {
     try {
         const updateBatch = db.batch();
@@ -71,12 +73,16 @@ const performKeyUpdate = async (
                 const userDoc = await usersCol.doc(participant.id).get();
                 const user = parseDBUserData(userDoc.data() as DBUserData);
                 const updatedUserPreviews = user.conversations.map((preview) => {
-                    let keyUpdate: string | undefined = undefined;
-                    if (preview.cid === cid && user.id in userKeyMap && userKeyMap[user.id] !== undefined) {
-                        keyUpdate = userKeyMap[user.id];
+                    if (
+                        preview.cid === cid &&
+                        participant.id in userKeyMap &&
+                        userKeyMap[participant.id] !== undefined
+                    ) {
+                        const keyUpdate = userKeyMap[participant.id];
                         return cleanUndefinedFields({
                             ...preview,
-                            keyUpdate
+                            keyUpdate,
+                            publicKey: newPublicKey
                         });
                     }
                     return cleanUndefinedFields(preview);
@@ -98,7 +104,9 @@ const addUserSecretsForNewConversation = async (
     userKeyMap: { [key: string]: string }
 ) => {
     try {
-        await performKeyUpdate(newConvo.id, newConvo.participants, userKeyMap);
+        if (newConvo.publicKey) {
+            await performKeyUpdate(newConvo.id, newConvo.participants, userKeyMap, newConvo.publicKey);
+        }
         await conversationsCol.doc(newConvo.id).update({
             keyInfo: {
                 createdAt: new Date(),
@@ -118,13 +126,16 @@ const addUserSecretsForNewParticipants = async (
     userKeyMap: { [key: string]: string }
 ) => {
     try {
-        await performKeyUpdate(convo.id, newParticipants, userKeyMap);
+        if (convo.publicKey) {
+            await performKeyUpdate(convo.id, newParticipants, userKeyMap, convo.publicKey);
+        }
+
         const currentKeyInfo = convo.keyInfo;
         if (currentKeyInfo) {
             await conversationsCol.doc(convo.id).update({
                 keyInfo: {
                     ...currentKeyInfo,
-                    privilegedUsers: [...currentKeyInfo.privilegedUsers, ...Object.entries(userKeyMap)]
+                    privilegedUsers: [...currentKeyInfo.privilegedUsers, ...Object.keys(userKeyMap)]
                 }
             });
         }
@@ -176,7 +187,7 @@ const changeEncryptionKey = async (
                 numberOfMessages: 0
             }
         });
-        await performKeyUpdate(convo.id, convo.participants, userKeyMap);
+        await performKeyUpdate(convo.id, convo.participants, userKeyMap, publicKey);
         return true;
     } catch (err) {
         console.log(err);

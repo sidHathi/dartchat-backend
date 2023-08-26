@@ -180,7 +180,7 @@ const updateConversationProfile = async (cid: string, newProfile: UserProfile) =
             })
         ];
         const res = await conversationsCol.doc(cid).update({
-            participants: cleanUndefinedFields(newParticipants)
+            participants: newParticipants
         });
         return res;
     } catch (err) {

@@ -86,7 +86,7 @@ const socketsRouter = (socket: Socket, server: Server) => {
     );
 
     socket.on('keyChange', (cid: string, newPublicKey: string, userKeyMap: { [id: string]: string }) => {
-        conversationsSocket.handleKeyChange(socket, cid, newPublicKey, userKeyMap);
+        conversationsSocket.handleKeyChange(socket, cid, newPublicKey, userKeyMap, pnService);
     });
 
     socket.on('deleteMessage', (cid: string, mid: string) =>

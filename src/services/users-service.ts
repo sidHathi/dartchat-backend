@@ -244,9 +244,7 @@ const addIdArrToContacts = async (newContactIds: string[], uid: string) => {
         const currUser = await getUser(uid);
         let filteredNewContactIds = newContactIds.filter((c) => c !== uid);
         if (currUser.contacts) {
-            filteredNewContactIds = newContactIds
-                .filter((c) => c !== uid && !currUser.contacts?.includes(c))
-                .map((c) => cleanUndefinedFields(c));
+            filteredNewContactIds = newContactIds.filter((c) => c !== uid && !currUser.contacts?.includes(c));
         }
         if (filteredNewContactIds.length > 0) {
             const updateRes = await usersCol.doc(uid).update({

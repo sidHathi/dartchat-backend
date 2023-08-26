@@ -27,7 +27,7 @@ const newConversation = async (
         const seedMessage = await messagesService.generateConversationInitMessage(newConvo, user.uid);
         await conversationsService.createNewConversation(newConvo, user.uid, recipientKeyMap);
         await messagesService.storeNewMessage(newConvo.id, seedMessage);
-        const recipients = newConvo.participants.filter((p) => p.id !== user.uid);
+        const recipients = newConvo.participants;
         recipients.map((r) => {
             socket.to(r.id).emit('newConversation', newConvo, recipientKeyMap);
         });
@@ -218,13 +218,19 @@ const handleKeyChange = async (
     userKeyMap: { [id: string]: string },
     pnService?: PushNotificationsService
 ) => {
-    Object.keys(userKeyMap).map((id) => {
-        socket.to(id).emit('keyChange', cid, newPublicKey, userKeyMap[id]);
-    });
-    if (pnService && socket.data.user.uid) {
-        const senderId = socket.data.user.uid;
+    const senderId = socket.data.user.uid;
+    try {
         const convo = await conversationsService.getConversationInfo(cid);
-        await pnService.pushNewSecrets(convo, senderId, newPublicKey, userKeyMap);
+        await secretsService.changeEncryptionKey(convo, newPublicKey, senderId, userKeyMap);
+        Object.keys(userKeyMap).map((id) => {
+            socket.to(id).emit('keyChange', cid, newPublicKey, userKeyMap);
+        });
+        if (pnService && socket.data.user.uid) {
+            const senderId = socket.data.user.uid;
+            await pnService.pushNewSecrets(convo, senderId, newPublicKey, userKeyMap);
+        }
+    } catch (err) {
+        console.log(err);
     }
 };
 

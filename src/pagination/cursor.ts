@@ -2,7 +2,7 @@ import { DocumentData } from 'firebase-admin/firestore';
 import { Query } from 'firebase-admin/firestore';
 import { Request } from 'express';
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 30;
 
 export type MessageCursor = {
     size: number;
