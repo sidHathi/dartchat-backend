@@ -26,35 +26,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
-const helmet_1 = __importDefault(require("helmet"));
+exports.db = void 0;
+const admin = __importStar(require("firebase-admin"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const http = __importStar(require("http"));
-const socket_io_1 = require("socket.io");
-const routers_1 = require("./routers");
-const middleware_1 = require("./middleware");
 dotenv_1.default.config();
-const app = (0, express_1.default)();
-app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)());
-app.use(express_1.default.json());
-app.use('/users', middleware_1.isAuthenticated, routers_1.usersRouter);
-app.use('/profiles', middleware_1.isAuthenticated, routers_1.profilesRouter);
-app.use('/conversations', middleware_1.isAuthenticated, routers_1.conversationsRouter);
-app.get('/', (req, res, next) => {
-    res.status(204).send();
+const serviceAcc = require(process.env.FIREBASE_SERVICE_KEY_PATH || '');
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAcc),
+    databaseURL: 'https://dartchat-a35b5.firebaseio.com'
 });
-const server = http.createServer(app);
-const io = new socket_io_1.Server(server, {
-    connectionStateRecovery: {
-        maxDisconnectionDuration: 2 * 60 * 1000,
-        skipMiddlewares: true
-    }
-});
-io.use(middleware_1.socketAuth).on('connection', (socket) => {
-    (0, routers_1.socketsRouter)(socket, io);
-});
-server.listen(process.env.BACK_PORT, () => {
-    console.log(`server running : http://${process.env.BACK_HOST}:${process.env.BACK_PORT}`);
-});
+exports.db = admin.firestore();
+exports.default = admin;

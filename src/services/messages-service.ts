@@ -55,9 +55,9 @@ const handleUserConversationMessage = async (
                 const user = userDoc.data() as UserData;
                 let unSeenMessages = 0;
                 const matchingConvos = user.conversations.filter((c) => c.cid === cid);
-                let avatar: AvatarImage | undefined = undefined;
+                let avatar: AvatarImage | undefined;
                 let name = cName;
-                let recipientId: string | undefined = undefined;
+                let recipientId: string | undefined;
                 if (matchingConvos.length > 0) {
                     unSeenMessages = matchingConvos[0].unSeenMessages;
                     avatar = matchingConvos[0].avatar;
@@ -77,7 +77,7 @@ const handleUserConversationMessage = async (
                         ...user.conversations.filter((c) => c.cid !== cid),
                         cleanUndefinedFields({
                             ...matchingConvos[0],
-                            cid: cid,
+                            cid,
                             name,
                             avatar,
                             unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
@@ -134,7 +134,7 @@ const getConversationMessagesToDate = async (cid: string, messageCursor: Message
     try {
         const messages: Message[] = [];
         const cursor = { ...messageCursor };
-        while (messages.length == 0 || messages[messages.length - 1].timestamp.getTime() - date.getTime() > 0) {
+        while (messages.length === 0 || messages[messages.length - 1].timestamp.getTime() - date.getTime() > 0) {
             messages.push(...(await getConversationMessages(cid, cursor)));
             cursor.prevLastVal = messages[messages.length - 1].timestamp;
         }

@@ -229,7 +229,6 @@ const handleKeyChange = async (
             socket.to(id).emit('keyChange', cid, newPublicKey, userKeyMap);
         });
         if (pnService && socket.data.user.uid) {
-            const senderId = socket.data.user.uid;
             await pnService.pushNewSecrets(convo, senderId, newPublicKey, userKeyMap);
         }
     } catch (err) {

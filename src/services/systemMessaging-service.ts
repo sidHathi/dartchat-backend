@@ -87,7 +87,7 @@ const sendEventResponse = async (
     pnService?: PushNotificationsService
 ) => {
     // also basic -> just log a user's response to an event
-    let content: string | undefined = undefined;
+    let content: string | undefined;
     const userName = user.displayName || user.handle;
     const eventName = event.name;
     switch (response) {

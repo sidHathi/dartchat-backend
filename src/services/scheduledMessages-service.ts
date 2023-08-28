@@ -69,7 +69,7 @@ const scheduledMessagesService: ScheduledMessagesService = {
     setServer(server: Server) {
         this.socketServer = server;
     },
-    addMessage: function (cid: string, message: Message, time: Date) {
+    addMessage (cid: string, message: Message, time: Date) {
         if (!this.scheduledMessages?.find((m) => m.name === message.id)) {
             const scMessage: ScheduledMessage = {
                 id: message.id,
@@ -88,7 +88,7 @@ const scheduledMessagesService: ScheduledMessagesService = {
                 });
         }
     },
-    removeMessage: function (mid: string) {
+    removeMessage (mid: string) {
         const match = this.scheduledMessages?.find((m) => m.name === mid);
         if (match) match.cancel();
         try {

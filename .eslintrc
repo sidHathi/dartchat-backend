@@ -10,6 +10,8 @@
         "sourceType": "module"
     },
     "rules": {
-        "prettier/prettier": "error"
+        "prettier/prettier": "error",
+        "no-unused-vars": "warn",
+        "no-unused-expressions": "warn"
     }
 }

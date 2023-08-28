@@ -180,7 +180,7 @@ const changeEncryptionKey = async (
 ) => {
     try {
         await conversationsCol.doc(convo.id).update({
-            publicKey: publicKey,
+            publicKey,
             keyInfo: keyInfo || {
                 createdAt: new Date(),
                 privilegedUsers: [senderId, ...Object.keys(userKeyMap)],

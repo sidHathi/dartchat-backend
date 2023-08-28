@@ -37,7 +37,7 @@ const pushNotificationsService: PushNotificationsService = {
         this.handledEvents = new Set<string>();
         return this;
     },
-    getRecipientTokens: async function (userIds: string[]): Promise<string[]> {
+    async getRecipientTokens(userIds: string[]): Promise<string[]> {
         try {
             const users = await usersService.getMultipleUsers(userIds);
             return users.reduce((acc: string[], user: UserData) => {
@@ -51,7 +51,7 @@ const pushNotificationsService: PushNotificationsService = {
             return [];
         }
     },
-    pushMessage: async function (cid: string, message: Message) {
+    async pushMessage(cid: string, message: Message) {
         if (!this.handledEvents || this.handledEvents.has(message.id)) return;
         this.handledEvents.add(message.id);
         try {
@@ -99,7 +99,7 @@ const pushNotificationsService: PushNotificationsService = {
             return;
         }
     },
-    pushNewConvo: async function (convo: Conversation, userId: string, userKeyMap?: { [id: string]: string }) {
+    async pushNewConvo(convo: Conversation, userId: string, userKeyMap?: { [id: string]: string }) {
         if (!this.handledEvents || this.handledEvents.has(convo.id)) return;
         this.handledEvents.add(convo.id);
         try {
@@ -161,7 +161,7 @@ const pushNotificationsService: PushNotificationsService = {
             return;
         }
     },
-    pushLike: async function (cid: string, message: Message, userId: string, event: SocketEvent) {
+    async pushLike(cid: string, message: Message, userId: string, event: SocketEvent) {
         if (!this.handledEvents || this.handledEvents.has(event.id)) return;
         this.handledEvents.add(event.id);
         if (event.type !== 'newLike') return;
@@ -225,12 +225,12 @@ const pushNotificationsService: PushNotificationsService = {
         }
         return;
     },
-    pushMention: async function (cid: string, mid: string) {
+    async pushMention(cid: string, mid: string) {
         console.log(cid);
         console.log(mid);
         return;
     },
-    pushNewConvoParticipants: async function (
+    async pushNewConvoParticipants(
         convo: Conversation,
         senderProfile: UserConversationProfile,
         newParticipants: UserConversationProfile[],

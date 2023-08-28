@@ -57,9 +57,11 @@ export const getCursorForQuery = (req: Request): MessageCursor => {
         }
     } catch (err) {
         console.log(err);
-    } finally {
         return {
             size
         };
     }
+    return {
+        size
+    };
 };

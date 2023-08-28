@@ -1,12 +1,15 @@
 {
-	"defaultSeverity": "error",
+	"defaultSeverity": "warning",
 	"extends": [
 		"tslint:recommended"
 	],
 	"jsRules": {},
 	"rules": {
 		"trailing-comma": [ false ],
-		"no-console": [true, "warning"]
+		"no-console": [true, "warning"],
+		"no-unused-vars": [true, "warning"],
+		"no-var-requires": [true, "warning"],
+		"no-unused-expression": [true, "warning"]
 	},
 	"rulesDirectory": []
 }
