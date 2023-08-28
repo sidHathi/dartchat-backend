@@ -26,7 +26,7 @@ export const getNextCursor = (prevCursor: MessageCursor, newLastVal: Date): Mess
 };
 
 export const encodeCursor = (cursor: MessageCursor): string => {
-    return btoa(JSON.stringify(cursor));
+    return Buffer.from(JSON.stringify(cursor)).toString('base64');
 };
 
 export const decodeCursor = (cursor: string): MessageCursor => {
