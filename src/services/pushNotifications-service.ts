@@ -55,13 +55,9 @@ const pushNotificationsService: PushNotificationsService = {
         if (!this.handledEvents || this.handledEvents.has(message.id)) return;
         this.handledEvents.add(message.id);
         try {
-            if ('encryptedFields' in message) return;
             const convo = await conversationsService.getConversationInfo(cid);
-            const senderId = message.senderId;
-            if (!convo.participants.find((p) => p.id === senderId)) return;
-            const sender = convo.participants.filter((p) => p.id === senderId)[0];
             const recipientIds: string[] = convo.participants.filter((p) => p.id !== message.senderId).map((p) => p.id);
-            const group = convo.participants.length > 2;
+            const recipientTokens = await this.getRecipientTokens(recipientIds);
 
             const data: PNPacket = {
                 type: 'message',
@@ -71,39 +67,33 @@ const pushNotificationsService: PushNotificationsService = {
                 })
             };
 
-            let unmentionedUserIds = recipientIds;
-            const mentionedUserIds: string[] = message.mentions?.map((u) => u.id) || [];
-            if (message.mentions) {
-                unmentionedUserIds = unmentionedUserIds.filter((id) => !mentionedUserIds.includes(id));
-            }
-            const mentionNotification = JSON.parse(
-                JSON.stringify({
-                    title: group ? convo.name : sender.displayName,
-                    body: `${group ? sender.displayName : ''} mentioned you ${group ? `in "` + convo.name + `"` : ''}`,
-                    imageUrl: convo.avatar?.tinyUri || sender.avatar?.tinyUri || undefined
-                })
-            );
-
-            if (mentionedUserIds.length > 0) {
-                const mentionedUserTokens = await this.getRecipientTokens(mentionedUserIds);
-                if (mentionedUserTokens.length > 0) {
-                    await admin.messaging().sendEachForMulticast({
-                        tokens: mentionedUserTokens,
-                        data,
-                        notification: mentionNotification
-                    });
+            await admin.messaging().sendEachForMulticast({
+                tokens: recipientTokens,
+                data,
+                android: {
+                    priority: 'high'
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            contentAvailable: true,
+                            mutableContent: true,
+                            sound: 'default'
+                        },
+                        notifee_options: {
+                            ...data,
+                            ios: {
+                                foregroundPresentationOptions: {
+                                    alert: true,
+                                    badge: true,
+                                    sound: true
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            if (unmentionedUserIds.length > 0) {
-                const unmentionedUserTokens = await this.getRecipientTokens(unmentionedUserIds);
-                if (unmentionedUserTokens.length > 0) {
-                    await admin.messaging().sendEachForMulticast({
-                        tokens: unmentionedUserTokens,
-                        data
-                        // notification
-                    });
-                }
-            }
+                // notification
+            });
         } catch (err) {
             console.log(err);
             return;
@@ -141,7 +131,29 @@ const pushNotificationsService: PushNotificationsService = {
             console.log(notification);
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
-                data
+                data,
+                android: {
+                    priority: 'high'
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            contentAvailable: true,
+                            mutableContent: true,
+                            sound: 'default'
+                        },
+                        notifee_options: {
+                            ...data,
+                            ios: {
+                                foregroundPresentationOptions: {
+                                    alert: true,
+                                    badge: true,
+                                    sound: true
+                                }
+                            }
+                        }
+                    }
+                }
                 // notification
             });
         } catch (err) {
@@ -182,7 +194,29 @@ const pushNotificationsService: PushNotificationsService = {
             console.log(notification);
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
-                data
+                data,
+                android: {
+                    priority: 'high'
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            contentAvailable: true,
+                            mutableContent: true,
+                            sound: 'default'
+                        },
+                        notifee_options: {
+                            ...data,
+                            ios: {
+                                foregroundPresentationOptions: {
+                                    alert: true,
+                                    badge: true,
+                                    sound: true
+                                }
+                            }
+                        }
+                    }
+                }
                 // notification
             });
         } catch (err) {
@@ -225,7 +259,17 @@ const pushNotificationsService: PushNotificationsService = {
             console.log(notification);
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
-                data
+                data,
+                android: {
+                    priority: 'high'
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            contentAvailable: true
+                        }
+                    }
+                }
             });
             return;
         } catch (err) {
@@ -250,7 +294,17 @@ const pushNotificationsService: PushNotificationsService = {
             console.log('sending secrets notification');
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
-                data
+                data,
+                android: {
+                    priority: 'high'
+                },
+                apns: {
+                    payload: {
+                        aps: {
+                            contentAvailable: true
+                        }
+                    }
+                }
             });
             return;
         } catch (err) {

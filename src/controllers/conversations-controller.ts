@@ -39,7 +39,7 @@ const getConversationInfo: RequestHandler = async (req, res, next) => {
             return;
         }
 
-        res.status(200).send(cleanConversation(convo));
+        res.status(200).send(convo);
     } catch (err) {
         next(err);
     }

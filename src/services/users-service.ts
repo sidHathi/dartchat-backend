@@ -119,25 +119,20 @@ const checkValidPhone = async (userData: UserData): Promise<boolean | never> => 
 
 const handleReadReceipt = async (uid: string, cid: string) => {
     try {
-        const userDoc = await usersCol.doc(uid).get();
-        if (userDoc.exists) {
-            const user = parseDBUserData(userDoc.data() as DBUserData);
-            const previews = user.conversations.filter((c) => c.cid === cid);
-            if (previews && previews.length > 0) {
-                const preview = previews[0];
-                const updatedUser = {
-                    ...user,
-                    conversations: [
-                        ...user.conversations.filter((c) => c.cid !== cid),
-                        {
-                            ...preview,
-                            unSeenMessages: 0
-                        }
-                    ]
-                };
-                return usersService.updateUser(uid, updatedUser);
-            }
-            return Promise.reject('conversation preview not found');
+        const user = await getUser(uid);
+        if (user) {
+            const updatedPreviews = user.conversations.map((c) => {
+                if (c.cid === cid) {
+                    return cleanUndefinedFields({
+                        ...c,
+                        unSeenMessages: 0
+                    } as ConversationPreview);
+                }
+                return cleanUndefinedFields(c);
+            });
+            return await usersCol.doc(uid).update({
+                conversations: updatedPreviews
+            });
         }
         return Promise.reject('user not found');
     } catch (err) {

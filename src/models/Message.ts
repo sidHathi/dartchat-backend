@@ -21,6 +21,7 @@ type MessageBase = {
     encryptionLevel: EncryptionLevel;
     senderId: string;
     likes: string[];
+    inGallery?: boolean;
     senderProfile?: UserConversationProfile;
     delivered?: boolean;
     mentions?: UserConversationProfile[];

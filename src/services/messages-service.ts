@@ -32,7 +32,8 @@ const generateConversationInitMessage = async (newConversation: Conversation, us
             content,
             senderId: 'system',
             id: uuid(),
-            likes: []
+            likes: [],
+            inGallery: false
         };
         return newMessage;
     } catch (err) {
@@ -261,7 +262,7 @@ const recordEventRsvp = async (convo: Conversation, eid: string, uid: string, re
 
 const getGalleryMessages = async (cid: string, cursor: MessageCursor) => {
     try {
-        const rawQuery = conversationsCol.doc(cid).collection('messages').orderBy('media');
+        const rawQuery = conversationsCol.doc(cid).collection('messages').orderBy('inGallery');
         const cursorQuery = getQueryForCursor(rawQuery, cursor);
         const messageDocs = await cursorQuery.get();
         const messages: Message[] = [];
@@ -369,7 +370,8 @@ const deleteMessage = async (cid: string, actorId: string, mid: string) => {
             senderProfile: currMessage.senderProfile,
             delivered: true,
             content: 'Message deleted',
-            likes: []
+            likes: [],
+            inGallery: false
         };
         await conversationsCol.doc(cid).collection('messages').doc(mid).set(cleanUndefinedFields(updatedMessage));
         return true;

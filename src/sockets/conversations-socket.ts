@@ -185,7 +185,10 @@ const handleEventRsvp = async (socket: Socket, cid: string, eid: string, respons
         const updateRes = await conversationsService.recordEventRsvp(cid, eid, uid, response);
         if (updateRes) {
             console.log(response);
-            await systemMessagingService.sendEventResponse(convo, event, response, user, socket);
+            const userProfile = convo.participants.find((p) => p.id === uid);
+            if (userProfile) {
+                await systemMessagingService.sendEventResponse(convo, event, response, userProfile, socket);
+            }
         }
         if (updateRes) {
             socket.to(cid).emit('eventRsvp', cid, eid, uid, response);

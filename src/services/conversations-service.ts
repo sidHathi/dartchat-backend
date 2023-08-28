@@ -52,7 +52,7 @@ const createNewConversation = async (
 const getConversationInfo = async (cid: string): Promise<Conversation | never> => {
     try {
         const convoDoc = await conversationsCol.doc(cid).get();
-        const convo = parseDBConvo(convoDoc.data() as Conversation);
+        const convo = parseDBConvo(convoDoc.data());
         if (!convo) return Promise.reject('no such convo');
         if (!convo.keyInfo) {
             convo.keyInfo = await secretsService.addKeyInfo(convo);
@@ -416,7 +416,7 @@ const getConversationsInfo = async (cids: string[]) => {
         await Promise.all(
             batchedCids.map(async (batch) => {
                 const conversationDocs = await conversationsCol.where('id', 'in', batch).get();
-                conversationDocs.forEach((c) => conversations.push(cleanConversation(c.data() as Conversation)));
+                conversationDocs.forEach((c) => conversations.push(parseDBConvo(c.data())));
             })
         );
         return conversations;

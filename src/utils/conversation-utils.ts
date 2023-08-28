@@ -1,15 +1,16 @@
+import { Timestamp } from 'firebase-admin/firestore';
 import { AvatarImage, ChatRole, Conversation, UserConversationProfile, UserData } from '../models';
 import { cleanUndefinedFields } from './request-utils';
 
 export const parseDBConvo = (convo: any): Conversation => {
     const safeConvo = cleanUndefinedFields(convo);
-    if (!safeConvo || safeConvo.keyInfo) return convo;
+    if (!safeConvo) return convo;
     return cleanConversation({
         ...safeConvo,
         keyInfo: safeConvo.keyInfo
             ? {
                   ...safeConvo.keyInfo,
-                  createdAt: safeConvo.keyInfo.createdAt.toDate()
+                  createdAt: (safeConvo.keyInfo.createdAt as Timestamp).toDate()
               }
             : undefined
     }) as Conversation;
@@ -22,7 +23,9 @@ export const cleanConversation = (convo: Conversation): Conversation => {
             avatar: undefined
         }) as Conversation;
     }
-    return cleanUndefinedFields(convo) as Conversation;
+    return cleanUndefinedFields({
+        ...convo
+    }) as Conversation;
 };
 
 export const getUserConversationAvatar = (convo: Conversation, userId: string): AvatarImage | undefined => {

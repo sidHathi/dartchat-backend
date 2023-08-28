@@ -13,17 +13,20 @@ import { Socket } from 'socket.io';
 import { v4 as uuid } from 'uuid';
 import { ScheduledMessagesService } from './scheduledMessages-service';
 import { PushNotificationsService } from './pushNotifications-service';
+import { cleanUndefinedFields } from '../utils/request-utils';
 
 const genSystemMessage = (content: string, refId?: string, link?: string): Message => {
-    return {
+    return cleanUndefinedFields({
         timestamp: new Date(),
         messageType: 'system',
         encryptionLevel: 'none',
         content,
         senderId: 'system',
         id: refId || uuid(),
-        likes: []
-    };
+        likes: [],
+        messageLink: link,
+        inGallery: false
+    });
 };
 
 const sendSystemMessage = async (
@@ -72,14 +75,14 @@ const getTimeStringForReminder = (reminderDate: Date, eventDate: Date) => {
     } else if (difMin < 60 * 36) {
         return 'in 1 day';
     }
-    return 'now';
+    return undefined;
 };
 
 const sendEventResponse = async (
     convo: Conversation,
     event: CalendarEvent,
     response: string,
-    user: UserData,
+    user: UserConversationProfile,
     socket?: Socket,
     pnService?: PushNotificationsService
 ) => {
@@ -99,15 +102,18 @@ const sendEventResponse = async (
             break;
     }
     const message = genSystemMessage(content, undefined, event.messageLink);
-    await sendSystemMessage(message, convo, socket);
+    await sendSystemMessage(message, convo, socket, pnService);
     return;
 };
 
-const scheduleEvent = (cid: string, event: CalendarEvent, scmService: ScheduledMessagesService, link?: string) => {
+const scheduleEvent = (cid: string, event: CalendarEvent, scmService: ScheduledMessagesService) => {
     // this should implement the above functions with node Cron
     event.reminders.map((time: Date) => {
-        const message = getEventReminderMessage(event.id, event.name, getTimeStringForReminder(time, event.date), link);
-        scmService.addMessage(cid, message, time);
+        const timeString = getTimeStringForReminder(time, event.date);
+        if (timeString) {
+            const message = getEventReminderMessage(event.id, event.name, timeString, event.messageLink);
+            scmService.addMessage(cid, message, time);
+        }
     });
     return;
 };
