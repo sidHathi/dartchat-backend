@@ -31,7 +31,7 @@ export const encodeCursor = (cursor: MessageCursor): string => {
 
 export const decodeCursor = (cursor: string): MessageCursor => {
     return Object.fromEntries(
-        Object.entries(JSON.parse(atob(cursor))).map(([key, val]) => {
+        Object.entries(JSON.parse(Buffer.from(cursor, 'base64').toString())).map(([key, val]) => {
             if (key === 'prevLastVal' && typeof val === 'string') return [key, new Date(Date.parse(val))];
             return [key, val];
         })

@@ -19,11 +19,14 @@ const getNextCursor = (prevCursor, newLastVal) => {
 };
 exports.getNextCursor = getNextCursor;
 const encodeCursor = (cursor) => {
-    return btoa(JSON.stringify(cursor));
+    console.log(cursor);
+    console.log(Buffer.from(JSON.stringify(cursor)).toString('base64'));
+    return Buffer.from(JSON.stringify(cursor)).toString('base64');
 };
 exports.encodeCursor = encodeCursor;
 const decodeCursor = (cursor) => {
-    return Object.fromEntries(Object.entries(JSON.parse(atob(cursor))).map(([key, val]) => {
+    console.log(Buffer.from(cursor, 'base64').toString());
+    return Object.fromEntries(Object.entries(JSON.parse(Buffer.from(cursor, 'base64').toString())).map(([key, val]) => {
         if (key === 'prevLastVal' && typeof val === 'string')
             return [key, new Date(Date.parse(val))];
         return [key, val];
