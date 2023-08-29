@@ -60,8 +60,6 @@ const pushNotificationsService: PushNotificationsService = {
                 .filter((p) => {
                     if (p.notifications === 'none') {
                         return false;
-                    } else if (p.notifications === 'mentions' && !message.mentions) {
-                        return false;
                     }
                     return p.id !== message.senderId;
                 })
@@ -73,7 +71,7 @@ const pushNotificationsService: PushNotificationsService = {
                 stringifiedBody: JSON.stringify({
                     message,
                     cid,
-                    convoProfiles: convo.participants
+                    convoProfiles: [...convo.participants]
                 })
             };
 
