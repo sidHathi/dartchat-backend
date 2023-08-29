@@ -72,7 +72,8 @@ const pushNotificationsService: PushNotificationsService = {
                 type: 'message',
                 stringifiedBody: JSON.stringify({
                     message,
-                    cid
+                    cid,
+                    convoProfiles: convo.participants
                 })
             };
 
