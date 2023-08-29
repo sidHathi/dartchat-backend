@@ -13,7 +13,9 @@ const createNewProfile = async (newUser: UserData) => {
             handle: newUser.handle,
             phone: newUser.phone,
             email: newUser.email,
-            displayName: newUser.displayName || newUser.handle
+            displayName: newUser.displayName || newUser.handle,
+            avatar: newUser.avatar,
+            publicKey: newUser.publicKey
         };
         profilesCol.doc(newUser.id).set(cleanUndefinedFields(userProfile));
         return userProfile;
@@ -31,7 +33,8 @@ const updateProfile = async (updatedUser: UserData) => {
             phone: updatedUser.phone,
             email: updatedUser.email,
             displayName: updatedUser.displayName || updatedUser.handle,
-            avatar: updatedUser.avatar
+            avatar: updatedUser.avatar,
+            publicKey: updatedUser.publicKey
         };
         profilesCol.doc(updatedUser.id).update(cleanUndefinedFields(updatedUserProfile));
         return updatedUserProfile;
