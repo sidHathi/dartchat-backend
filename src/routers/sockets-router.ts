@@ -14,7 +14,7 @@ const pnService: PushNotificationsService = pushNotificationsService.init();
 const scmService: ScheduledMessagesService = scheduledMessagesService.init(null, pnService);
 
 const socketsRouter = (socket: Socket, server: Server) => {
-    console.log(`a user connected with id ${socket.id}`);
+    // console.log(`a user connected with id ${socket.id}`);
     userSocketMap[socket.data.user.uid] = socket.id;
     !socket.recovered && userSocket.onUserAuth(socket);
     if (!scmService.socketServer) {
@@ -27,7 +27,6 @@ const socketsRouter = (socket: Socket, server: Server) => {
     });
 
     socket.on('joinRoom', (rid: string[]) => {
-        console.log('joining room with rids: ' + rid);
         socket.join(rid);
     });
 
@@ -102,7 +101,6 @@ const socketsRouter = (socket: Socket, server: Server) => {
     });
 
     socket.on('disconnect', () => {
-        console.log(`user disconnected`);
         if (socket.data.user.uid && socket.data.user.uid in userSocketMap) {
             delete userSocketMap[socket.data.user.uid];
         }

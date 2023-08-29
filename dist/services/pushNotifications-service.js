@@ -45,7 +45,17 @@ const pushNotificationsService = {
             this.handledEvents.add(message.id);
             try {
                 const convo = yield conversations_service_1.default.getConversationInfo(cid);
-                const recipientIds = convo.participants.filter((p) => p.id !== message.senderId).map((p) => p.id);
+                const recipientIds = convo.participants
+                    .filter((p) => {
+                    if (p.notifications === 'none') {
+                        return false;
+                    }
+                    else if (p.notifications === 'mentions' && !message.mentions) {
+                        return false;
+                    }
+                    return p.id !== message.senderId;
+                })
+                    .map((p) => p.id);
                 const recipientTokens = yield this.getRecipientTokens(recipientIds);
                 const data = {
                     type: 'message',
@@ -111,8 +121,6 @@ const pushNotificationsService = {
                     }),
                     stringifiedDisplay: JSON.stringify(notification)
                 };
-                console.log('sending new convo push notification');
-                console.log(notification);
                 yield firebase_1.default.messaging().sendEachForMulticast({
                     tokens: recipientTokens,
                     data,
@@ -153,7 +161,8 @@ const pushNotificationsService = {
                 return;
             try {
                 const convo = yield conversations_service_1.default.getConversationInfo(cid);
-                if (!convo.participants.find((p) => p.id === userId))
+                const recipient = convo.participants.find((p) => p.id === message.senderId);
+                if (!recipient || recipient.notifications === 'none')
                     return;
                 const recipientId = message.senderId;
                 const recipientTokens = yield this.getRecipientTokens([recipientId]);
@@ -175,8 +184,6 @@ const pushNotificationsService = {
                     }),
                     stringifiedDisplay: JSON.stringify(notification)
                 };
-                console.log('sending like push notification');
-                console.log(notification);
                 yield firebase_1.default.messaging().sendEachForMulticast({
                     tokens: recipientTokens,
                     data,
@@ -236,8 +243,6 @@ const pushNotificationsService = {
                     }),
                     stringifiedDisplay: JSON.stringify(notification)
                 };
-                console.log('sending convoAdd notification');
-                console.log(notification);
                 yield firebase_1.default.messaging().sendEachForMulticast({
                     tokens: recipientTokens,
                     data,
@@ -273,7 +278,6 @@ const pushNotificationsService = {
                         newKeyMap
                     })
                 };
-                console.log('sending secrets notification');
                 yield firebase_1.default.messaging().sendEachForMulticast({
                     tokens: recipientTokens,
                     data,

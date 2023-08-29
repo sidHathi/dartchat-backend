@@ -277,11 +277,9 @@ const getLargeMessageList = (cid, maxSize, dateLimit) => __awaiter(void 0, void 
     }
 });
 const reencryptMessages = (convo, reencryptionData) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(reencryptionData);
     try {
         const idMap = Object.fromEntries(reencryptionData.data.map((triple) => [triple.id, triple]));
         const updateBatch = firebase_1.db.batch();
-        console.log(reencryptionData.minDate);
         const parsedMinDate = new Date(Date.parse(reencryptionData.minDate));
         const messageUpdateDocs = yield conversationsCol
             .doc(convo.id)
@@ -289,7 +287,6 @@ const reencryptMessages = (convo, reencryptionData) => __awaiter(void 0, void 0,
             .where('timestamp', '>=', parsedMinDate)
             .get();
         messageUpdateDocs.forEach((doc) => {
-            console.log(doc);
             const message = doc.data();
             if (message.id in idMap) {
                 const encryptedDataForId = idMap[message.id];
@@ -310,7 +307,6 @@ const reencryptMessages = (convo, reencryptionData) => __awaiter(void 0, void 0,
             updateBatch.delete(doc.ref);
         });
         yield updateBatch.commit();
-        console.log('succesfuly updated message encrypted fields');
         yield secrets_service_1.default.updateKeyInfoForReencryption(convo, reencryptionData.data.length);
     }
     catch (err) {

@@ -26,7 +26,6 @@ const isAuthenticated = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
     const token = split[1];
     try {
         const decodedToken = yield firebase_1.default.auth().verifyIdToken(token);
-        console.log('decodedToken', JSON.stringify(decodedToken));
         res.locals = Object.assign(Object.assign({}, res.locals), { uid: decodedToken.uid, role: decodedToken.role, email: decodedToken.email });
         return next();
     }

@@ -4,18 +4,14 @@ import { messagesService } from '../services';
 import { PushNotificationsService } from '../services/pushNotifications-service';
 
 const newMessage = async (socket: Socket, cid: string, message: Message, pnService?: PushNotificationsService) => {
-    console.log('new message received');
     // send the message to the appropriate room and store it in the conversation
     try {
-        console.log('sending to room: ' + cid);
-        console.log(message);
         const deliveredMessage: Message = {
             ...message,
             delivered: true
         };
         await messagesService.storeNewMessage(cid, deliveredMessage);
         socket.to(cid).emit('newMessage', cid, deliveredMessage);
-        console.log(pnService);
         if (pnService !== undefined) {
             await pnService.pushMessage(cid, deliveredMessage);
         }
@@ -37,7 +33,6 @@ const newLikeEvent = async (
     try {
         const uid = socket.data.user.uid;
         socket.to(cid).emit('newLikeEvent', cid, mid, uid, event);
-        console.log('new like sent');
         const message = await messagesService.storeNewLike(cid, mid, uid, event.type);
         if (pnService) {
             await pnService.pushLike(cid, message, uid, event);

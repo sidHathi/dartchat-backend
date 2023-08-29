@@ -22,7 +22,6 @@ const getConversation: RequestHandler = async (req, res, next) => {
             lastMessage && convo.messages.length >= cursor.size
                 ? encodeCursor(getNextCursor(cursor, lastMessage.timestamp))
                 : 'none';
-        console.log(nextCursorString);
         res.set('cursor', nextCursorString);
         res.status(200).send(convo);
     } catch (err) {
@@ -49,7 +48,6 @@ const getConversationMessages: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id;
         const cursor: MessageCursor = getCursorForQuery(req);
-        console.log(cursor);
         const messages: Message[] = await messagesService.getConversationMessages(cid, cursor);
 
         const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -73,7 +71,6 @@ const getConversationMessagesToDate: RequestHandler = async (req, res, next) => 
         const cid = req.params.id;
         const date: Date = new Date(Date.parse(req.body.date));
         const cursor: MessageCursor = getCursorForQuery(req);
-        console.log(cursor);
         const messages: Message[] = await messagesService.getConversationMessagesToDate(cid, cursor, date);
 
         const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -107,7 +104,6 @@ const getConversationMessage: RequestHandler = async (req, res, next) => {
 
 const deleteConversation: RequestHandler = async (req, res, next) => {
     try {
-        console.log('deleting conversation - controller');
         const cid = req.params.id;
         const uid = res.locals?.uid;
         const delRes = await conversationsService.deleteConversation(cid, uid);
@@ -341,7 +337,6 @@ const getGalleryMessages: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id;
         const cursor: MessageCursor = getCursorForQuery(req);
-        console.log(cursor);
         const messages: Message[] = await messagesService.getGalleryMessages(cid, cursor);
 
         const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;

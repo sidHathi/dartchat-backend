@@ -145,7 +145,6 @@ const handleReadReceipt = (uid, cid) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 const updatePushNotificationTokens = (newToken, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log(`PNTOKEN: ${newToken}`);
     try {
         const user = yield getUser(userId);
         if (user.pushTokens && user.pushTokens.includes(newToken)) {

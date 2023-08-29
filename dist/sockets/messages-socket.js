@@ -11,14 +11,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const services_1 = require("../services");
 const newMessage = (socket, cid, message, pnService) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('new message received');
     try {
-        console.log('sending to room: ' + cid);
-        console.log(message);
         const deliveredMessage = Object.assign(Object.assign({}, message), { delivered: true });
         yield services_1.messagesService.storeNewMessage(cid, deliveredMessage);
         socket.to(cid).emit('newMessage', cid, deliveredMessage);
-        console.log(pnService);
         if (pnService !== undefined) {
             yield pnService.pushMessage(cid, deliveredMessage);
         }
@@ -34,7 +30,6 @@ const newLikeEvent = (socket, cid, mid, event, pnService) => __awaiter(void 0, v
     try {
         const uid = socket.data.user.uid;
         socket.to(cid).emit('newLikeEvent', cid, mid, uid, event);
-        console.log('new like sent');
         const message = yield services_1.messagesService.storeNewLike(cid, mid, uid, event.type);
         if (pnService) {
             yield pnService.pushLike(cid, message, uid, event);
