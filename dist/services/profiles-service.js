@@ -22,7 +22,9 @@ const createNewProfile = (newUser) => __awaiter(void 0, void 0, void 0, function
             handle: newUser.handle,
             phone: newUser.phone,
             email: newUser.email,
-            displayName: newUser.displayName || newUser.handle
+            displayName: newUser.displayName || newUser.handle,
+            avatar: newUser.avatar,
+            publicKey: newUser.publicKey
         };
         profilesCol.doc(newUser.id).set((0, request_utils_1.cleanUndefinedFields)(userProfile));
         return userProfile;
@@ -41,7 +43,8 @@ const updateProfile = (updatedUser) => __awaiter(void 0, void 0, void 0, functio
             phone: updatedUser.phone,
             email: updatedUser.email,
             displayName: updatedUser.displayName || updatedUser.handle,
-            avatar: updatedUser.avatar
+            avatar: updatedUser.avatar,
+            publicKey: updatedUser.publicKey
         };
         profilesCol.doc(updatedUser.id).update((0, request_utils_1.cleanUndefinedFields)(updatedUserProfile));
         return updatedUserProfile;

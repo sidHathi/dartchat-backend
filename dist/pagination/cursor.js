@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCursorForQuery = exports.getQueryForCursor = exports.decodeCursor = exports.encodeCursor = exports.getNextCursor = exports.initCursor = void 0;
-const DEFAULT_PAGE_SIZE = 30;
+const DEFAULT_PAGE_SIZE = 50;
 const initCursor = (lastVal, pageSize) => {
     const size = pageSize || DEFAULT_PAGE_SIZE;
     const prevLastVal = lastVal;
@@ -19,13 +19,10 @@ const getNextCursor = (prevCursor, newLastVal) => {
 };
 exports.getNextCursor = getNextCursor;
 const encodeCursor = (cursor) => {
-    console.log(cursor);
-    console.log(Buffer.from(JSON.stringify(cursor)).toString('base64'));
     return Buffer.from(JSON.stringify(cursor)).toString('base64');
 };
 exports.encodeCursor = encodeCursor;
 const decodeCursor = (cursor) => {
-    console.log(Buffer.from(cursor, 'base64').toString());
     return Object.fromEntries(Object.entries(JSON.parse(Buffer.from(cursor, 'base64').toString())).map(([key, val]) => {
         if (key === 'prevLastVal' && typeof val === 'string')
             return [key, new Date(Date.parse(val))];
