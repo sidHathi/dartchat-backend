@@ -56,7 +56,16 @@ const pushNotificationsService: PushNotificationsService = {
         this.handledEvents.add(message.id);
         try {
             const convo = await conversationsService.getConversationInfo(cid);
-            const recipientIds: string[] = convo.participants.filter((p) => p.id !== message.senderId).map((p) => p.id);
+            const recipientIds: string[] = convo.participants
+                .filter((p) => {
+                    if (p.notifications === 'none') {
+                        return false;
+                    } else if (p.notifications === 'mentions' && !message.mentions) {
+                        return false;
+                    }
+                    return p.id !== message.senderId;
+                })
+                .map((p) => p.id);
             const recipientTokens = await this.getRecipientTokens(recipientIds);
 
             const data: PNPacket = {
@@ -165,7 +174,8 @@ const pushNotificationsService: PushNotificationsService = {
         if (event.type !== 'newLike') return;
         try {
             const convo = await conversationsService.getConversationInfo(cid);
-            if (!convo.participants.find((p) => p.id === userId)) return;
+            const recipient = convo.participants.find((p) => p.id === message.senderId);
+            if (!recipient || recipient.notifications === 'none') return;
             const recipientId = message.senderId;
             const recipientTokens = await this.getRecipientTokens([recipientId]);
             const sender = convo.participants.filter((p) => p.id === userId)[0];
