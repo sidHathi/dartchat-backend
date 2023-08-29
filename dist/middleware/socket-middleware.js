@@ -15,12 +15,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const firebase_1 = __importDefault(require("../firebase"));
 const socketAuth = (socket, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { token } = socket.handshake.auth;
-    console.log(token);
     if (!token)
         next(new Error('unauthorized'));
     try {
         const decodedToken = yield firebase_1.default.auth().verifyIdToken(token);
-        console.log('user: ', JSON.stringify(decodedToken.uid));
         socket.data.user = decodedToken;
         next();
     }

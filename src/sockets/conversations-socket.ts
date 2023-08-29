@@ -17,7 +17,6 @@ const newConversation = async (
     recipientKeyMap?: { [key: string]: string },
     pnService?: PushNotificationsService
 ): Promise<Conversation | null> => {
-    console.log('new conversation message received');
     socket.join(newConvo.id);
     try {
         const user = socket.data.user;
@@ -146,7 +145,6 @@ const newParticipants = async (
 
 const removeParticipant = async (socket: Socket, cid: string, profile: UserConversationProfile) => {
     // see above comment
-    console.log('user will be removed');
     socket.to(cid).emit('removeConversationUser', cid, profile.id);
     const senderId = socket.data.user.uid;
     try {
@@ -184,7 +182,6 @@ const handleEventRsvp = async (socket: Socket, cid: string, eid: string, respons
 
         const updateRes = await conversationsService.recordEventRsvp(cid, eid, uid, response);
         if (updateRes) {
-            console.log(response);
             const userProfile = convo.participants.find((p) => p.id === uid);
             if (userProfile) {
                 await systemMessagingService.sendEventResponse(convo, event, response, userProfile, socket);

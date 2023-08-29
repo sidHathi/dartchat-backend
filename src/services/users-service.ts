@@ -141,7 +141,6 @@ const handleReadReceipt = async (uid: string, cid: string) => {
 };
 
 const updatePushNotificationTokens = async (newToken: string, userId: string) => {
-    console.log(`PNTOKEN: ${newToken}`);
     try {
         const user = await getUser(userId);
         if (user.pushTokens && user.pushTokens.includes(newToken)) {

@@ -34,7 +34,6 @@ export const getUserConversationAvatar = (convo: Conversation, userId: string): 
     }
     const otherUsers = convo.participants.filter((p) => p.id !== userId);
     if (otherUsers.length > 0) {
-        console.log(otherUsers[0].avatar);
         return otherUsers[0].avatar;
     }
     return undefined;

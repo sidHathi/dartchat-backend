@@ -308,11 +308,9 @@ const reencryptMessages = async (
         }[];
     }
 ) => {
-    console.log(reencryptionData);
     try {
         const idMap = Object.fromEntries(reencryptionData.data.map((triple) => [triple.id, triple]));
         const updateBatch = db.batch();
-        console.log(reencryptionData.minDate);
         const parsedMinDate = new Date(Date.parse(reencryptionData.minDate));
         const messageUpdateDocs = await conversationsCol
             .doc(convo.id)
@@ -320,7 +318,6 @@ const reencryptMessages = async (
             .where('timestamp', '>=', parsedMinDate)
             .get();
         messageUpdateDocs.forEach((doc) => {
-            console.log(doc);
             const message = doc.data() as DBMessage;
             if (message.id in idMap) {
                 const encryptedDataForId = idMap[message.id];
@@ -343,7 +340,6 @@ const reencryptMessages = async (
             updateBatch.delete(doc.ref);
         });
         await updateBatch.commit();
-        console.log('succesfuly updated message encrypted fields');
         await secretsService.updateKeyInfoForReencryption(convo, reencryptionData.data.length);
     } catch (err) {
         console.log(err);

@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const services_1 = require("../services");
 const newConversation = (socket, newConvo, userSocketMap, recipientKeyMap, pnService) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('new conversation message received');
     socket.join(newConvo.id);
     try {
         const user = socket.data.user;
@@ -117,7 +116,6 @@ const newParticipants = (socket, cid, profiles, userSocketMap, userKeyMap, pnSer
     }
 });
 const removeParticipant = (socket, cid, profile) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('user will be removed');
     socket.to(cid).emit('removeConversationUser', cid, profile.id);
     const senderId = socket.data.user.uid;
     try {
@@ -157,7 +155,6 @@ const handleEventRsvp = (socket, cid, eid, response) => __awaiter(void 0, void 0
             return;
         const updateRes = yield services_1.conversationsService.recordEventRsvp(cid, eid, uid, response);
         if (updateRes) {
-            console.log(response);
             const userProfile = convo.participants.find((p) => p.id === uid);
             if (userProfile) {
                 yield services_1.systemMessagingService.sendEventResponse(convo, event, response, userProfile, socket);

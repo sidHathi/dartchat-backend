@@ -127,8 +127,6 @@ const pushNotificationsService: PushNotificationsService = {
                 stringifiedDisplay: JSON.stringify(notification)
             };
 
-            console.log('sending new convo push notification');
-            console.log(notification);
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
                 data,
@@ -190,8 +188,6 @@ const pushNotificationsService: PushNotificationsService = {
                 stringifiedDisplay: JSON.stringify(notification)
             };
 
-            console.log('sending like push notification');
-            console.log(notification);
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
                 data,
@@ -255,8 +251,6 @@ const pushNotificationsService: PushNotificationsService = {
                 stringifiedDisplay: JSON.stringify(notification)
             };
 
-            console.log('sending convoAdd notification');
-            console.log(notification);
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
                 data,
@@ -291,7 +285,6 @@ const pushNotificationsService: PushNotificationsService = {
                 })
             };
 
-            console.log('sending secrets notification');
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
                 data,

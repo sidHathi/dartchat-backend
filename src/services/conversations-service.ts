@@ -134,7 +134,6 @@ const conversationExists = async (cid: string) => {
 
 const deleteConversation = async (cid: string, userId: string) => {
     try {
-        console.log('deleting conversation');
         const convo = (await conversationsCol.doc(cid).get()).data() as Conversation;
         if (!convo) {
             const currentUser = await usersService.getUser(userId);
@@ -219,7 +218,6 @@ const updateConversationPreviews = async (cid: string) => {
         const convoDoc = await conversationsCol.doc(cid).get();
         if (convoDoc.exists) {
             const convo = parseDBConvo(convoDoc.data() as Conversation);
-            console.log(convo);
             if (!convo.participants) return;
             convo.participants.map(async (p: any) => usersService.updatePreviewDetails(convo, p.id));
             return true;

@@ -122,7 +122,6 @@ const conversationExists = (cid) => __awaiter(void 0, void 0, void 0, function* 
 });
 const deleteConversation = (cid, userId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('deleting conversation');
         const convo = (yield conversationsCol.doc(cid).get()).data();
         if (!convo) {
             const currentUser = yield users_service_1.default.getUser(userId);
@@ -197,7 +196,6 @@ const updateConversationPreviews = (cid) => __awaiter(void 0, void 0, void 0, fu
         const convoDoc = yield conversationsCol.doc(cid).get();
         if (convoDoc.exists) {
             const convo = (0, conversation_utils_1.parseDBConvo)(convoDoc.data());
-            console.log(convo);
             if (!convo.participants)
                 return;
             convo.participants.map((p) => __awaiter(void 0, void 0, void 0, function* () { return users_service_1.default.updatePreviewDetails(convo, p.id); }));

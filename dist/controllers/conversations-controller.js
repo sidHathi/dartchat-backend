@@ -27,7 +27,6 @@ const getConversation = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         const nextCursorString = lastMessage && convo.messages.length >= cursor.size
             ? (0, pagination_1.encodeCursor)((0, pagination_1.getNextCursor)(cursor, lastMessage.timestamp))
             : 'none';
-        console.log(nextCursorString);
         res.set('cursor', nextCursorString);
         res.status(200).send(convo);
     }
@@ -53,7 +52,6 @@ const getConversationMessages = (req, res, next) => __awaiter(void 0, void 0, vo
     try {
         const cid = req.params.id;
         const cursor = (0, pagination_1.getCursorForQuery)(req);
-        console.log(cursor);
         const messages = yield services_1.messagesService.getConversationMessages(cid, cursor);
         const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
         const nextCursor = lastMessage && messages.length >= cursor.size
@@ -75,7 +73,6 @@ const getConversationMessagesToDate = (req, res, next) => __awaiter(void 0, void
         const cid = req.params.id;
         const date = new Date(Date.parse(req.body.date));
         const cursor = (0, pagination_1.getCursorForQuery)(req);
-        console.log(cursor);
         const messages = yield services_1.messagesService.getConversationMessagesToDate(cid, cursor, date);
         const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
         const nextCursor = lastMessage && messages.length >= cursor.size
@@ -108,7 +105,6 @@ const getConversationMessage = (req, res, next) => __awaiter(void 0, void 0, voi
 const deleteConversation = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        console.log('deleting conversation - controller');
         const cid = req.params.id;
         const uid = (_a = res.locals) === null || _a === void 0 ? void 0 : _a.uid;
         const delRes = yield services_1.conversationsService.deleteConversation(cid, uid);
@@ -342,7 +338,6 @@ const getGalleryMessages = (req, res, next) => __awaiter(void 0, void 0, void 0,
     try {
         const cid = req.params.id;
         const cursor = (0, pagination_1.getCursorForQuery)(req);
-        console.log(cursor);
         const messages = yield services_1.messagesService.getGalleryMessages(cid, cursor);
         const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
         const nextCursor = lastMessage && messages.length >= cursor.size
