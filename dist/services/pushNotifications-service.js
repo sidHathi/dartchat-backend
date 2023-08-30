@@ -54,8 +54,7 @@ const pushNotificationsService = {
                     type: 'message',
                     stringifiedBody: JSON.stringify({
                         message,
-                        cid,
-                        convoProfiles: [...convo.participants]
+                        cid
                     })
                 };
                 yield firebase_1.default.messaging().sendEachForMulticast({
