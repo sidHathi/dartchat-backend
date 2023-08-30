@@ -17,8 +17,8 @@ const profiles_service_1 = __importDefault(require("./profiles-service"));
 const request_utils_1 = require("../utils/request-utils");
 const firestore_1 = require("firebase-admin/firestore");
 const conversation_utils_1 = require("../utils/conversation-utils");
-const usersCol = firebase_1.db.collection('users');
-const conversationsCol = firebase_1.db.collection('conversations');
+const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users');
+const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
 const getUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const currentUser = yield usersCol.doc(userId).get();

@@ -3,7 +3,7 @@ import { UserData, UserProfile } from '../models';
 import { chunk, cleanUndefinedFields } from '../utils/request-utils';
 import { FieldPath, Filter } from 'firebase-admin/firestore';
 
-const profilesCol = db.collection('profiles');
+const profilesCol = db.collection(process.env.FIREBASE_PROFILES_COL || 'profiles');
 
 const createNewProfile = async (newUser: UserData) => {
     try {

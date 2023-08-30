@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { Server } from 'socket.io';
 import { db } from '../firebase';
 import { Message, ScheduledMessage } from '../models';
@@ -5,7 +6,7 @@ import messagesService from './messages-service';
 import { Job, scheduleJob } from 'node-schedule';
 import { PushNotificationsService } from './pushNotifications-service';
 
-const scheduleCol = db.collection('scheduledMessages');
+const scheduleCol = db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages');
 
 export type ScheduledMessagesService = {
     scheduledMessages: Job[] | null;
@@ -69,7 +70,7 @@ const scheduledMessagesService: ScheduledMessagesService = {
     setServer(server: Server) {
         this.socketServer = server;
     },
-    addMessage (cid: string, message: Message, time: Date) {
+    addMessage(cid: string, message: Message, time: Date) {
         if (!this.scheduledMessages?.find((m) => m.name === message.id)) {
             const scMessage: ScheduledMessage = {
                 id: message.id,
@@ -88,7 +89,7 @@ const scheduledMessagesService: ScheduledMessagesService = {
                 });
         }
     },
-    removeMessage (mid: string) {
+    removeMessage(mid: string) {
         const match = this.scheduledMessages?.find((m) => m.name === mid);
         if (match) match.cancel();
         try {

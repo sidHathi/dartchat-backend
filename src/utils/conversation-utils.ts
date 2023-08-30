@@ -29,7 +29,7 @@ export const cleanConversation = (convo: Conversation): Conversation => {
 };
 
 export const getUserConversationAvatar = (convo: Conversation, userId: string): AvatarImage | undefined => {
-    if (convo.participants.length > 2) {
+    if (convo.group) {
         return convo.avatar;
     }
     const otherUsers = convo.participants.filter((p) => p.id !== userId);
