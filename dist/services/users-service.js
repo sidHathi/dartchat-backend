@@ -361,6 +361,24 @@ const updateConversationsForNewUserDetails = (userData) => __awaiter(void 0, voi
         return Promise.reject(err);
     }
 });
+const updateNotStatus = (uid, cid, newStatus) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield getUser(uid);
+        const updatedPreviews = user.conversations.map((c) => {
+            if (c.cid === cid) {
+                return (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, c), { notifications: newStatus }));
+            }
+            return (0, request_utils_1.cleanUndefinedFields)(c);
+        });
+        yield usersCol.doc(uid).update({
+            conversationsCol: updatedPreviews
+        });
+        return true;
+    }
+    catch (err) {
+        return false;
+    }
+});
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -378,6 +396,7 @@ const usersService = {
     removeConvoFromArchive,
     setUserPublicKey,
     updatePreviewRole,
-    updateConversationsForNewUserDetails
+    updateConversationsForNewUserDetails,
+    updateNotStatus
 };
 exports.default = usersService;

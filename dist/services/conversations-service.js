@@ -217,6 +217,7 @@ const updateUserNotStatus = (cid, uid, newStatus) => __awaiter(void 0, void 0, v
             const res = conversationsCol.doc(convo.id).update({
                 participants: updatedProfilesList
             });
+            yield users_service_1.default.updateNotStatus(uid, cid, newStatus);
             return res;
         }
         return Promise.reject('no such profile in conversation');
