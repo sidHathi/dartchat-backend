@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import AvatarImage from './AvatarImage';
 import Message, { DBMessage } from './Message';
-import { ChatRole } from './UserConversationProfile';
+import { ChatRole, NotificationStatus } from './UserConversationProfile';
 
 export type DBConversationPreview = {
     cid: string;
@@ -16,6 +16,7 @@ export type DBConversationPreview = {
     keyUpdate?: string;
     publicKey?: string;
     userRole?: ChatRole;
+    notifications?: NotificationStatus;
 };
 
 type ConversationPreview = {
@@ -31,6 +32,7 @@ type ConversationPreview = {
     keyUpdate?: string;
     publicKey?: string;
     userRole?: ChatRole;
+    notifications?: NotificationStatus;
 };
 
 export default ConversationPreview;

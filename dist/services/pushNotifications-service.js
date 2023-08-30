@@ -45,23 +45,17 @@ const pushNotificationsService = {
             this.handledEvents.add(message.id);
             try {
                 const convo = yield conversations_service_1.default.getConversationInfo(cid);
-                const recipientIds = convo.participants
-                    .filter((p) => {
-                    if (p.notifications === 'none') {
-                        return false;
-                    }
-                    else if (p.notifications === 'mentions' && !message.mentions) {
-                        return false;
-                    }
+                const recipientProfiles = convo.participants.filter((p) => {
                     return p.id !== message.senderId;
-                })
-                    .map((p) => p.id);
+                });
+                const recipientIds = recipientProfiles.map((p) => p.id);
                 const recipientTokens = yield this.getRecipientTokens(recipientIds);
                 const data = {
                     type: 'message',
                     stringifiedBody: JSON.stringify({
                         message,
-                        cid
+                        cid,
+                        convoProfiles: [...convo.participants]
                     })
                 };
                 yield firebase_1.default.messaging().sendEachForMulticast({

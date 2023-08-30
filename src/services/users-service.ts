@@ -1,5 +1,13 @@
 import { db } from '../firebase';
-import { DBUserData, UserData, Conversation, ConversationPreview, ChatRole, UserConversationProfile } from '../models';
+import {
+    DBUserData,
+    UserData,
+    Conversation,
+    ConversationPreview,
+    ChatRole,
+    UserConversationProfile,
+    NotificationStatus
+} from '../models';
 import profileService from './profiles-service';
 import { chunk, cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { Socket } from 'socket.io';
@@ -371,6 +379,27 @@ const updateConversationsForNewUserDetails = async (userData: UserData) => {
     }
 };
 
+const updateNotStatus = async (uid: string, cid: string, newStatus: NotificationStatus) => {
+    try {
+        const user = await getUser(uid);
+        const updatedPreviews = user.conversations.map((c) => {
+            if (c.cid === cid) {
+                return cleanUndefinedFields({
+                    ...c,
+                    notifications: newStatus
+                });
+            }
+            return cleanUndefinedFields(c);
+        });
+        await usersCol.doc(uid).update({
+            conversationsCol: updatedPreviews
+        });
+        return true;
+    } catch (err) {
+        return false;
+    }
+};
+
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -388,7 +417,8 @@ const usersService = {
     removeConvoFromArchive,
     setUserPublicKey,
     updatePreviewRole,
-    updateConversationsForNewUserDetails
+    updateConversationsForNewUserDetails,
+    updateNotStatus
 };
 
 export default usersService;

@@ -24,7 +24,10 @@ type MessageBase = {
     inGallery?: boolean;
     senderProfile?: UserConversationProfile;
     delivered?: boolean;
-    mentions?: UserConversationProfile[];
+    mentions?: {
+        id: string;
+        displayName: string;
+    }[];
     replyRef?: ReplyRef;
     messageLink?: string;
 };

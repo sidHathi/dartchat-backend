@@ -241,6 +241,7 @@ const updateUserNotStatus = async (cid: string, uid: string, newStatus: Notifica
             const res = conversationsCol.doc(convo.id).update({
                 participants: updatedProfilesList
             });
+            await usersService.updateNotStatus(uid, cid, newStatus);
             return res;
         }
         return Promise.reject('no such profile in conversation');

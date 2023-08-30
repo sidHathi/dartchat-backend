@@ -56,22 +56,17 @@ const pushNotificationsService: PushNotificationsService = {
         this.handledEvents.add(message.id);
         try {
             const convo = await conversationsService.getConversationInfo(cid);
-            const recipientIds: string[] = convo.participants
-                .filter((p) => {
-                    if (p.notifications === 'none') {
-                        return false;
-                    }
-                    return p.id !== message.senderId;
-                })
-                .map((p) => p.id);
+            const recipientProfiles = convo.participants.filter((p) => {
+                return p.id !== message.senderId;
+            });
+            const recipientIds: string[] = recipientProfiles.map((p) => p.id);
             const recipientTokens = await this.getRecipientTokens(recipientIds);
 
             const data: PNPacket = {
                 type: 'message',
                 stringifiedBody: JSON.stringify({
                     message,
-                    cid,
-                    convoProfiles: [...convo.participants]
+                    cid
                 })
             };
 

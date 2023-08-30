@@ -33,7 +33,7 @@ dotenv_1.default.config();
 const serviceAcc = require(process.env.FIREBASE_SERVICE_KEY_PATH || '');
 admin.initializeApp({
     credential: admin.credential.cert(serviceAcc),
-    databaseURL: 'https://dartchat-a35b5.firebaseio.com'
+    databaseURL: process.env.FIREBASE_DB_URL || ''
 });
 exports.db = admin.firestore();
 exports.default = admin;
