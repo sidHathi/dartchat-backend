@@ -12,8 +12,8 @@ import usersService from './users-service';
 import { cleanUndefinedFields, parseDBUserData } from '../utils/request-utils';
 import { EncryptedMessage } from 'models/Message';
 
-const usersCol = db.collection('users');
-const conversationsCol = db.collection('conversations');
+const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users');
+const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
 
 const handleKeyUpdateReceipt = async (user: UserData, cids: string[]) => {
     try {

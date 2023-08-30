@@ -15,8 +15,8 @@ import { cleanConversation, hasPermissionForAction } from '../utils/conversation
 import { DecryptedMessage, EncryptedMessage } from 'models/Message';
 import secretsService from './secrets-service';
 
-const conversationsCol = db.collection('conversations');
-const usersCol = db.collection('users');
+const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
+const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users');
 
 const generateConversationInitMessage = async (newConversation: Conversation, userId: string) => {
     const timestamp = new Date();
@@ -74,7 +74,6 @@ const handleUserConversationMessage = async (
                         : (message as DecryptedMessage).content;
                 usersCol.doc(id).update({
                     conversations: [
-                        ...user.conversations.filter((c) => c.cid !== cid),
                         cleanUndefinedFields({
                             ...matchingConvos[0],
                             cid,
@@ -85,7 +84,8 @@ const handleUserConversationMessage = async (
                             lastMessageContent,
                             lastMessage: message,
                             recipientId
-                        } as ConversationPreview)
+                        } as ConversationPreview),
+                        ...user.conversations.filter((c) => c.cid !== cid)
                     ]
                 });
             }

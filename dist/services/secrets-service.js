@@ -11,8 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const firebase_1 = require("../firebase");
 const request_utils_1 = require("../utils/request-utils");
-const usersCol = firebase_1.db.collection('users');
-const conversationsCol = firebase_1.db.collection('conversations');
+const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users');
+const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
 const handleKeyUpdateReceipt = (user, cids) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         return true;

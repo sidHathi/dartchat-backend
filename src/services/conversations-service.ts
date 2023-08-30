@@ -28,8 +28,8 @@ import {
 import messagesService from './messages-service';
 import secretsService from './secrets-service';
 
-const usersCol = db.collection('users');
-const conversationsCol = db.collection('conversations');
+const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users');
+const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
 
 const createNewConversation = async (
     newConversation: Conversation,
