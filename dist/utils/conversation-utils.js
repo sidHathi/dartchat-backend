@@ -18,7 +18,7 @@ const cleanConversation = (convo) => {
 };
 exports.cleanConversation = cleanConversation;
 const getUserConversationAvatar = (convo, userId) => {
-    if (convo.participants.length > 2) {
+    if (convo.group) {
         return convo.avatar;
     }
     const otherUsers = convo.participants.filter((p) => p.id !== userId);

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const users_service_1 = __importDefault(require("./users-service"));
 const conversations_service_1 = __importDefault(require("./conversations-service"));
 const firebase_1 = __importDefault(require("../firebase"));
+const request_utils_1 = require("../utils/request-utils");
 const pushNotificationsService = {
     handledEvents: null,
     init() {
@@ -35,6 +36,23 @@ const pushNotificationsService = {
             catch (err) {
                 console.log(err);
                 return [];
+            }
+        });
+    },
+    getRecipientTokenMap(userIds) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const users = yield users_service_1.default.getMultipleUsers(userIds);
+                return Object.fromEntries(users.reduce((acc, user) => {
+                    if (user.pushTokens && user.pushTokens.length > 0) {
+                        return acc.concat([[user.id, user.pushTokens]]);
+                    }
+                    return acc;
+                }, []));
+            }
+            catch (err) {
+                console.log(err);
+                return {};
             }
         });
     },
@@ -97,46 +115,51 @@ const pushNotificationsService = {
                 if (!convo.participants.find((p) => p.id === userId))
                     return;
                 const recipientIds = convo.participants.filter((p) => p.id !== userId).map((r) => r.id);
-                const recipientTokens = yield this.getRecipientTokens(recipientIds);
                 const creator = convo.participants.filter((p) => p.id === userId)[0];
-                if (recipientTokens.length < 1)
+                const recipientTokenMap = yield this.getRecipientTokenMap(recipientIds);
+                if (Object.entries(recipientTokenMap).length < 1)
                     return;
                 const notification = JSON.parse(JSON.stringify({
                     title: 'You were added to a new conversation',
                     body: `${creator.displayName} added you to ${convo.name}`,
                     imageUrl: ((_a = convo.avatar) === null || _a === void 0 ? void 0 : _a.tinyUri) || ((_b = creator.avatar) === null || _b === void 0 ? void 0 : _b.tinyUri) || undefined
                 }));
-                const data = {
-                    type: 'newConvo',
-                    stringifiedBody: JSON.stringify({
-                        convo,
-                        userKeyMap: userKeyMap || {}
-                    }),
-                    stringifiedDisplay: JSON.stringify(notification)
-                };
-                yield firebase_1.default.messaging().sendEachForMulticast({
-                    tokens: recipientTokens,
-                    data,
-                    android: {
-                        priority: 'high'
-                    },
-                    apns: {
-                        payload: {
-                            aps: {
-                                contentAvailable: true,
-                                mutableContent: true,
-                                sound: 'default'
-                            },
-                            notifee_options: Object.assign(Object.assign({}, data), { ios: {
-                                    foregroundPresentationOptions: {
-                                        alert: true,
-                                        badge: true,
-                                        sound: true
-                                    }
-                                } })
+                yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
+                    if (!Object.keys(recipientTokenMap).includes(id))
+                        return;
+                    const hasKeyMap = userKeyMap && userKeyMap[id] !== undefined;
+                    const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
+                    const data = {
+                        type: 'newConvo',
+                        stringifiedBody: JSON.stringify((0, request_utils_1.cleanUndefinedFields)({
+                            convo: (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, convo), { participants: convo.participants.filter((p) => p.id === id), keyInfo: undefined, messages: [], adminIds: undefined }))
+                        })),
+                        stringifiedDisplay: JSON.stringify(notification)
+                    };
+                    yield firebase_1.default.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true,
+                                    mutableContent: true,
+                                    sound: 'default'
+                                },
+                                notifee_options: Object.assign(Object.assign({}, data), { ios: {
+                                        foregroundPresentationOptions: {
+                                            alert: true,
+                                            badge: true,
+                                            sound: true
+                                        }
+                                    } })
+                            }
                         }
-                    }
-                });
+                    });
+                })));
             }
             catch (err) {
                 console.log(err);
@@ -220,36 +243,41 @@ const pushNotificationsService = {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const recipientIds = newParticipants.map((p) => p.id).filter((id) => id !== senderProfile.id);
-                const recipientTokens = yield this.getRecipientTokens(recipientIds);
-                if (recipientTokens.length < 1)
+                const recipientTokenMap = yield this.getRecipientTokenMap(recipientIds);
+                if (Object.entries(recipientTokenMap).length < 1)
                     return;
                 const notification = {
                     title: convo.name,
                     body: `${senderProfile.displayName} added you to ${convo.name}`,
                     imageUrl: ((_a = convo.avatar) === null || _a === void 0 ? void 0 : _a.tinyUri) || undefined
                 };
-                const data = {
-                    type: 'addedToConvo',
-                    stringifiedBody: JSON.stringify({
-                        convo,
-                        userKeyMap: userKeyMap || {}
-                    }),
-                    stringifiedDisplay: JSON.stringify(notification)
-                };
-                yield firebase_1.default.messaging().sendEachForMulticast({
-                    tokens: recipientTokens,
-                    data,
-                    android: {
-                        priority: 'high'
-                    },
-                    apns: {
-                        payload: {
-                            aps: {
-                                contentAvailable: true
+                yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
+                    if (!(id in recipientTokenMap))
+                        return;
+                    const hasKeyMap = userKeyMap && id in userKeyMap;
+                    const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
+                    const data = {
+                        type: 'addedToConvo',
+                        stringifiedBody: JSON.stringify({
+                            convo: (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, convo), { participants: convo.participants.filter((p) => p.id === id), keyInfo: undefined }))
+                        }),
+                        stringifiedDisplay: JSON.stringify(notification)
+                    };
+                    yield firebase_1.default.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                })));
                 return;
             }
             catch (err) {
@@ -262,29 +290,37 @@ const pushNotificationsService = {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const recipientIds = convo.participants.filter((p) => p.id !== senderId).map((p) => p.id);
-                const recipientTokens = yield this.getRecipientTokens(recipientIds);
-                const data = {
-                    type: 'secrets',
-                    stringifiedBody: JSON.stringify({
-                        cid: convo.id,
-                        newPublicKey,
-                        newKeyMap
-                    })
-                };
-                yield firebase_1.default.messaging().sendEachForMulticast({
-                    tokens: recipientTokens,
-                    data,
-                    android: {
-                        priority: 'high'
-                    },
-                    apns: {
-                        payload: {
-                            aps: {
-                                contentAvailable: true
+                const recipientTokenMap = yield this.getRecipientTokenMap(recipientIds);
+                if (Object.entries(recipientTokenMap).length < 1)
+                    return;
+                yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
+                    if (!(id in recipientTokenMap) || !(id in newKeyMap))
+                        return;
+                    const keyMapForUser = { [id]: newKeyMap[id] };
+                    const data = {
+                        type: 'secrets',
+                        stringifiedBody: JSON.stringify({
+                            cid: convo.id,
+                            newPublicKey,
+                            newKeyMap: keyMapForUser
+                        })
+                    };
+                    yield firebase_1.default.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true,
+                                    mutableContent: true
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                })));
                 return;
             }
             catch (err) {

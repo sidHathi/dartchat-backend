@@ -70,10 +70,10 @@ const handleUserConversationMessage = (cid, cName, group, participantIds, messag
                     : message.content;
                 usersCol.doc(id).update({
                     conversations: [
-                        ...user.conversations.filter((c) => c.cid !== cid),
                         (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, matchingConvos[0]), { cid,
                             name,
-                            avatar, unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1, lastMessageTime: message.timestamp, lastMessageContent, lastMessage: message, recipientId }))
+                            avatar, unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1, lastMessageTime: message.timestamp, lastMessageContent, lastMessage: message, recipientId })),
+                        ...user.conversations.filter((c) => c.cid !== cid)
                     ]
                 });
             }
