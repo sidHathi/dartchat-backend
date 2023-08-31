@@ -5,6 +5,7 @@ import { Conversation, Message, UserData, SocketEvent, UserConversationProfile, 
 import admin from '../firebase';
 import PNPacket from 'models/PNPacket';
 import { DecryptedMessage } from 'models/Message';
+import { cleanUndefinedFields } from '../utils/request-utils';
 
 export type PushNotificationsService = {
     handledEvents: Set<string> | null;
@@ -126,9 +127,7 @@ const pushNotificationsService: PushNotificationsService = {
         try {
             if (!convo.participants.find((p) => p.id === userId)) return;
             const recipientIds = convo.participants.filter((p) => p.id !== userId).map((r) => r.id);
-            const recipientTokens = await this.getRecipientTokens(recipientIds);
             const creator = convo.participants.filter((p) => p.id === userId)[0];
-            if (recipientTokens.length < 1) return;
             const recipientTokenMap = await this.getRecipientTokenMap(recipientIds);
             if (Object.entries(recipientTokenMap).length < 1) return;
 
@@ -143,19 +142,23 @@ const pushNotificationsService: PushNotificationsService = {
 
             await Promise.all(
                 recipientIds.map(async (id) => {
-                    if (!(id in recipientTokenMap)) return;
-                    const hasKeyMap = userKeyMap && id in userKeyMap;
+                    if (!Object.keys(recipientTokenMap).includes(id)) return;
+                    const hasKeyMap = userKeyMap && userKeyMap[id] !== undefined;
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data: PNPacket = {
                         type: 'newConvo',
-                        stringifiedBody: JSON.stringify({
-                            convo: {
-                                ...convo,
-                                participants: convo.participants.filter((p) => p.id === id),
-                                keyInfo: undefined
-                            } as Conversation,
-                            userKeyMap: keyMapForUser || {}
-                        }),
+                        stringifiedBody: JSON.stringify(
+                            cleanUndefinedFields({
+                                convo: cleanUndefinedFields({
+                                    ...convo,
+                                    participants: convo.participants.filter((p) => p.id === id),
+                                    keyInfo: undefined,
+                                    messages: [],
+                                    adminIds: undefined
+                                }) as Conversation
+                                // userKeyMap: cleanUndefinedFields(keyMapForUser) || {}
+                            })
+                        ),
                         stringifiedDisplay: JSON.stringify(notification)
                     };
 
@@ -285,12 +288,12 @@ const pushNotificationsService: PushNotificationsService = {
                     const data: PNPacket = {
                         type: 'addedToConvo',
                         stringifiedBody: JSON.stringify({
-                            convo: {
+                            convo: cleanUndefinedFields({
                                 ...convo,
                                 participants: convo.participants.filter((p) => p.id === id),
                                 keyInfo: undefined
-                            } as Conversation,
-                            userKeyMap: keyMapForUser
+                            }) as Conversation
+                            // userKeyMap: keyMapForUser
                         }),
                         stringifiedDisplay: JSON.stringify(notification)
                     };

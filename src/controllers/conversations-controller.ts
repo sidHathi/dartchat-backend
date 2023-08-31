@@ -395,7 +395,7 @@ const deleteMessage: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.cid;
         const mid = req.params.mid;
-        const actorId = res.locals.uid;
+        const actorId = res.locals.uid as string;
         const deletionRes = await messagesService.deleteMessage(cid, actorId, mid);
         res.status(200).send(deletionRes);
     } catch (err) {

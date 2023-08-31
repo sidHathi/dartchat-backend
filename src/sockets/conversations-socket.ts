@@ -35,7 +35,7 @@ const newConversation = async (
         socket.emit('conversationReceived', newConvo);
         socket.join(newConvo.id);
         if (pnService) {
-            await pnService.pushNewConvo(newConvo, user.uid);
+            await pnService.pushNewConvo(newConvo, user.uid, recipientKeyMap);
         }
         return newConvo;
     } catch (err) {
@@ -68,6 +68,7 @@ const newPrivateMessage = async (
                 if (newConvo.publicKey && recipientKeyMap) {
                     const senderId = socket.data.user.uid;
                     await pnService.pushNewSecrets(newConvo, senderId, newConvo.publicKey, recipientKeyMap);
+                    await new Promise((res) => setTimeout(res, 100));
                 }
                 await pnService.pushMessage(newConvo.id, deliveredMessage);
             }
@@ -142,6 +143,9 @@ const newParticipants = async (
     if (pnService) {
         const senderProfile = convo.participants.find((p) => p.id === senderId);
         if (senderProfile) {
+            if (userKeyMap && convo.publicKey) {
+                await pnService.pushNewSecrets(convo, senderProfile.id, convo.publicKey, userKeyMap);
+            }
             await pnService.pushNewConvoParticipants(convo, senderProfile, profiles, userKeyMap);
         }
     }
