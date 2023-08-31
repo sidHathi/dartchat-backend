@@ -29,7 +29,7 @@ const newConversation = (socket, newConvo, userSocketMap, recipientKeyMap, pnSer
         socket.emit('conversationReceived', newConvo);
         socket.join(newConvo.id);
         if (pnService) {
-            yield pnService.pushNewConvo(newConvo, user.uid);
+            yield pnService.pushNewConvo(newConvo, user.uid, recipientKeyMap);
         }
         return newConvo;
     }
@@ -47,7 +47,12 @@ const newPrivateMessage = (socket, seedConvo, userSocketMap, firstMessage, recip
             yield services_1.messagesService.storeNewMessage(newConvo.id, deliveredMessage);
             socket.to(newConvo.id).emit('newMessage', newConvo.id, deliveredMessage);
             socket.emit('newMessage', newConvo.id, deliveredMessage);
-            if (pnService) {
+            if (pnService && newConvo) {
+                if (newConvo.publicKey && recipientKeyMap) {
+                    const senderId = socket.data.user.uid;
+                    yield pnService.pushNewSecrets(newConvo, senderId, newConvo.publicKey, recipientKeyMap);
+                    yield new Promise((res) => setTimeout(res, 100));
+                }
                 yield pnService.pushMessage(newConvo.id, deliveredMessage);
             }
         }
@@ -111,6 +116,9 @@ const newParticipants = (socket, cid, profiles, userSocketMap, userKeyMap, pnSer
     if (pnService) {
         const senderProfile = convo.participants.find((p) => p.id === senderId);
         if (senderProfile) {
+            if (userKeyMap && convo.publicKey) {
+                yield pnService.pushNewSecrets(convo, senderProfile.id, convo.publicKey, userKeyMap);
+            }
             yield pnService.pushNewConvoParticipants(convo, senderProfile, profiles, userKeyMap);
         }
     }
