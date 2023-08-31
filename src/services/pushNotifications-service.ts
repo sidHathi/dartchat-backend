@@ -1,14 +1,17 @@
+/* eslint-disable no-unused-vars */
 import usersService from './users-service';
 import conversationsService from './conversations-service';
 import { Conversation, Message, UserData, SocketEvent, UserConversationProfile, ChatRole } from '../models';
 import admin from '../firebase';
 import PNPacket from 'models/PNPacket';
 import { DecryptedMessage } from 'models/Message';
+import { cleanUndefinedFields } from '../utils/request-utils';
 
 export type PushNotificationsService = {
     handledEvents: Set<string> | null;
     init: () => PushNotificationsService;
     getRecipientTokens: (userIds: string[]) => Promise<string[]>;
+    getRecipientTokenMap: (userIds: string[]) => Promise<{ [id: string]: string[] }>;
     pushMessage: (cid: string, message: Message) => Promise<void>;
     pushNewConvo: (convo: Conversation, userId: string, userKeyMap?: { [id: string]: string }) => Promise<void>;
     pushLike: (cid: string, message: Message, userId: string, event: SocketEvent) => Promise<void>;
@@ -49,6 +52,22 @@ const pushNotificationsService: PushNotificationsService = {
         } catch (err) {
             console.log(err);
             return [];
+        }
+    },
+    async getRecipientTokenMap(userIds: string[]): Promise<{ [id: string]: string[] }> {
+        try {
+            const users = await usersService.getMultipleUsers(userIds);
+            return Object.fromEntries(
+                users.reduce((acc: [string, string[]][], user: UserData) => {
+                    if (user.pushTokens && user.pushTokens.length > 0) {
+                        return acc.concat([[user.id, user.pushTokens]]);
+                    }
+                    return acc;
+                }, [])
+            );
+        } catch (err) {
+            console.log(err);
+            return {};
         }
     },
     async pushMessage(cid: string, message: Message) {
@@ -108,9 +127,9 @@ const pushNotificationsService: PushNotificationsService = {
         try {
             if (!convo.participants.find((p) => p.id === userId)) return;
             const recipientIds = convo.participants.filter((p) => p.id !== userId).map((r) => r.id);
-            const recipientTokens = await this.getRecipientTokens(recipientIds);
             const creator = convo.participants.filter((p) => p.id === userId)[0];
-            if (recipientTokens.length < 1) return;
+            const recipientTokenMap = await this.getRecipientTokenMap(recipientIds);
+            if (Object.entries(recipientTokenMap).length < 1) return;
 
             // should only be called for groupchats
             const notification = JSON.parse(
@@ -121,42 +140,57 @@ const pushNotificationsService: PushNotificationsService = {
                 })
             );
 
-            const data: PNPacket = {
-                type: 'newConvo',
-                stringifiedBody: JSON.stringify({
-                    convo,
-                    userKeyMap: userKeyMap || {}
-                }),
-                stringifiedDisplay: JSON.stringify(notification)
-            };
+            await Promise.all(
+                recipientIds.map(async (id) => {
+                    if (!Object.keys(recipientTokenMap).includes(id)) return;
+                    const hasKeyMap = userKeyMap && userKeyMap[id] !== undefined;
+                    const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
+                    const data: PNPacket = {
+                        type: 'newConvo',
+                        stringifiedBody: JSON.stringify(
+                            cleanUndefinedFields({
+                                convo: cleanUndefinedFields({
+                                    ...convo,
+                                    participants: convo.participants.filter((p) => p.id === id),
+                                    keyInfo: undefined,
+                                    messages: [],
+                                    adminIds: undefined
+                                }) as Conversation
+                                // userKeyMap: cleanUndefinedFields(keyMapForUser) || {}
+                            })
+                        ),
+                        stringifiedDisplay: JSON.stringify(notification)
+                    };
 
-            await admin.messaging().sendEachForMulticast({
-                tokens: recipientTokens,
-                data,
-                android: {
-                    priority: 'high'
-                },
-                apns: {
-                    payload: {
-                        aps: {
-                            contentAvailable: true,
-                            mutableContent: true,
-                            sound: 'default'
+                    await admin.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data,
+                        android: {
+                            priority: 'high'
                         },
-                        notifee_options: {
-                            ...data,
-                            ios: {
-                                foregroundPresentationOptions: {
-                                    alert: true,
-                                    badge: true,
-                                    sound: true
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true,
+                                    mutableContent: true,
+                                    sound: 'default'
+                                },
+                                notifee_options: {
+                                    ...data,
+                                    ios: {
+                                        foregroundPresentationOptions: {
+                                            alert: true,
+                                            badge: true,
+                                            sound: true
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-                // notification
-            });
+                        // notification
+                    });
+                })
+            );
         } catch (err) {
             console.log(err);
             return;
@@ -217,7 +251,6 @@ const pushNotificationsService: PushNotificationsService = {
                         }
                     }
                 }
-                // notification
             });
         } catch (err) {
             console.log(err);
@@ -238,37 +271,48 @@ const pushNotificationsService: PushNotificationsService = {
     ) {
         try {
             const recipientIds = newParticipants.map((p) => p.id).filter((id) => id !== senderProfile.id);
-            const recipientTokens = await this.getRecipientTokens(recipientIds);
-            if (recipientTokens.length < 1) return;
+            const recipientTokenMap = await this.getRecipientTokenMap(recipientIds);
+            if (Object.entries(recipientTokenMap).length < 1) return;
 
             const notification = {
                 title: convo.name,
                 body: `${senderProfile.displayName} added you to ${convo.name}`,
                 imageUrl: convo.avatar?.tinyUri || undefined
             };
-            const data: PNPacket = {
-                type: 'addedToConvo',
-                stringifiedBody: JSON.stringify({
-                    convo,
-                    userKeyMap: userKeyMap || {}
-                }),
-                stringifiedDisplay: JSON.stringify(notification)
-            };
 
-            await admin.messaging().sendEachForMulticast({
-                tokens: recipientTokens,
-                data,
-                android: {
-                    priority: 'high'
-                },
-                apns: {
-                    payload: {
-                        aps: {
-                            contentAvailable: true
+            await Promise.all(
+                recipientIds.map(async (id: string) => {
+                    if (!(id in recipientTokenMap)) return;
+                    const hasKeyMap = userKeyMap && id in userKeyMap;
+                    const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
+                    const data: PNPacket = {
+                        type: 'addedToConvo',
+                        stringifiedBody: JSON.stringify({
+                            convo: cleanUndefinedFields({
+                                ...convo,
+                                participants: convo.participants.filter((p) => p.id === id),
+                                keyInfo: undefined
+                            }) as Conversation
+                            // userKeyMap: keyMapForUser
+                        }),
+                        stringifiedDisplay: JSON.stringify(notification)
+                    };
+                    await admin.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true
+                                }
+                            }
                         }
-                    }
-                }
-            });
+                    });
+                })
+            );
             return;
         } catch (err) {
             console.log(err);
@@ -278,31 +322,39 @@ const pushNotificationsService: PushNotificationsService = {
     async pushNewSecrets(convo, senderId, newPublicKey, newKeyMap) {
         try {
             const recipientIds = convo.participants.filter((p) => p.id !== senderId).map((p) => p.id);
-            const recipientTokens = await this.getRecipientTokens(recipientIds);
+            const recipientTokenMap = await this.getRecipientTokenMap(recipientIds);
+            if (Object.entries(recipientTokenMap).length < 1) return;
 
-            const data: PNPacket = {
-                type: 'secrets',
-                stringifiedBody: JSON.stringify({
-                    cid: convo.id,
-                    newPublicKey,
-                    newKeyMap
-                })
-            };
-
-            await admin.messaging().sendEachForMulticast({
-                tokens: recipientTokens,
-                data,
-                android: {
-                    priority: 'high'
-                },
-                apns: {
-                    payload: {
-                        aps: {
-                            contentAvailable: true
+            await Promise.all(
+                recipientIds.map(async (id: string) => {
+                    if (!(id in recipientTokenMap) || !(id in newKeyMap)) return;
+                    const keyMapForUser = { [id]: newKeyMap[id] };
+                    const data: PNPacket = {
+                        type: 'secrets',
+                        stringifiedBody: JSON.stringify({
+                            cid: convo.id,
+                            newPublicKey,
+                            newKeyMap: keyMapForUser
+                        })
+                    };
+                    await admin.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true,
+                                    mutableContent: true
+                                }
+                            }
                         }
-                    }
-                }
-            });
+                    });
+                })
+            );
+
             return;
         } catch (err) {
             console.log(err);
