@@ -64,7 +64,11 @@ const newPrivateMessage = async (
             await messagesService.storeNewMessage(newConvo.id, deliveredMessage);
             socket.to(newConvo.id).emit('newMessage', newConvo.id, deliveredMessage);
             socket.emit('newMessage', newConvo.id, deliveredMessage);
-            if (pnService) {
+            if (pnService && newConvo) {
+                if (newConvo.publicKey && recipientKeyMap) {
+                    const senderId = socket.data.user.uid;
+                    await pnService.pushNewSecrets(newConvo, senderId, newConvo.publicKey, recipientKeyMap);
+                }
                 await pnService.pushMessage(newConvo.id, deliveredMessage);
             }
         }
