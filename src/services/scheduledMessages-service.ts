@@ -73,7 +73,8 @@ const scheduledMessagesService: ScheduledMessagesService = {
         this.socketServer = server;
     },
     addMessage(cid: string, message: Message, time: Date) {
-        if (!this.scheduledMessages?.find((m) => m.name === message.id)) {
+        if (!message) return;
+        if (!this.scheduledMessages?.find((m) => m && m.name === message.id)) {
             const scMessage: ScheduledMessage = {
                 id: message.id,
                 cid,
