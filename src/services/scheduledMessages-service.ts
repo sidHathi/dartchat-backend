@@ -6,7 +6,7 @@ import messagesService from './messages-service';
 import { Job, scheduleJob } from 'node-schedule';
 import { PushNotificationsService } from './pushNotifications-service';
 
-const scheduleCol = db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages');
+const scheduleCol = db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages-dev');
 
 export type ScheduledMessagesService = {
     scheduledMessages: Job[] | null;

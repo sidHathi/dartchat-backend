@@ -14,8 +14,8 @@ import { Socket } from 'socket.io';
 import { FieldValue } from 'firebase-admin/firestore';
 import { parseDBConvo } from '../utils/conversation-utils';
 
-const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users');
-const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
+const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users-dev');
+const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations-dev');
 
 const getUser = async (userId: string): Promise<UserData | never> => {
     try {

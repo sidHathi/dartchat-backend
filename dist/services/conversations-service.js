@@ -21,8 +21,8 @@ const request_utils_2 = require("../utils/request-utils");
 const conversation_utils_1 = require("../utils/conversation-utils");
 const messages_service_1 = __importDefault(require("./messages-service"));
 const secrets_service_1 = __importDefault(require("./secrets-service"));
-const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users');
-const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
+const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users-dev');
+const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations-dev');
 const createNewConversation = (newConversation, uid, userKeyMap) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield conversationsCol.doc(newConversation.id).set((0, conversation_utils_1.cleanConversation)(newConversation));

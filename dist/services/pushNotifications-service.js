@@ -127,6 +127,8 @@ const pushNotificationsService = {
                 yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
                     if (!Object.keys(recipientTokenMap).includes(id))
                         return;
+                    if (recipientTokenMap[id].length < 1)
+                        return;
                     const hasKeyMap = userKeyMap && userKeyMap[id] !== undefined;
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data = {
@@ -254,6 +256,8 @@ const pushNotificationsService = {
                 yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
                     if (!(id in recipientTokenMap))
                         return;
+                    if (recipientTokenMap[id].length < 1)
+                        return;
                     const hasKeyMap = userKeyMap && id in userKeyMap;
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data = {
@@ -296,6 +300,8 @@ const pushNotificationsService = {
                 yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
                     if (!(id in recipientTokenMap) || !(id in newKeyMap))
                         return;
+                    if (recipientTokenMap[id].length < 1)
+                        return;
                     const keyMapForUser = { [id]: newKeyMap[id] };
                     const data = {
                         type: 'secrets',
@@ -334,6 +340,8 @@ const pushNotificationsService = {
             try {
                 const recipientIds = convo.participants.filter((p) => p.id !== senderId).map((p) => p.id);
                 const recipientTokens = yield this.getRecipientTokens(recipientIds);
+                if (recipientTokens.length < 1)
+                    return;
                 const data = {
                     type: 'deleteMessage',
                     stringifiedBody: JSON.stringify({
@@ -358,11 +366,17 @@ const pushNotificationsService = {
             try {
                 const recipientIds = convo.participants.map((p) => p.id);
                 const recipientTokens = yield this.getRecipientTokens(recipientIds);
+                if (recipientTokens.length < 1)
+                    return;
                 const data = {
                     type: 'message',
                     stringifiedBody: JSON.stringify({
                         cid: convo.id,
-                        message
+                        message: Object.assign(Object.assign({}, message), { senderProfile: message.senderProfile
+                                ? {
+                                    displayName: message.senderProfile.displayName
+                                }
+                                : undefined })
                     })
                 };
                 yield firebase_1.default.messaging().sendEachForMulticast({

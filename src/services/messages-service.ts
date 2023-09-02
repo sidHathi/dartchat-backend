@@ -15,8 +15,8 @@ import { cleanConversation, hasPermissionForAction } from '../utils/conversation
 import { DecryptedMessage, EncryptedMessage } from 'models/Message';
 import secretsService from './secrets-service';
 
-const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
-const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users');
+const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations-dev');
+const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users-dev');
 
 const generateConversationInitMessage = async (newConversation: Conversation, userId: string) => {
     const timestamp = new Date();
