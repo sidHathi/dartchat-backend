@@ -400,6 +400,7 @@ const changeEncryptionKey: RequestHandler = async (req, res, next) => {
         const convo = await conversationsService.getConversationInfo(cid);
         if (await secretsService.changeEncryptionKey(convo, publicKey, uid, userKeyMap, keyInfo)) {
             res.status(200).send();
+            return;
         }
         res.status(400).send('Key update failed');
     } catch (err) {

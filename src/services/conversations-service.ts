@@ -12,9 +12,10 @@ import {
     Poll,
     CalendarEvent,
     LikeIcon,
-    ChatRole
+    ChatRole,
+    DBPoll
 } from '../models';
-import { chunk, cleanUndefinedFields } from '../utils/request-utils';
+import { chunk, cleanUndefinedFields, parseDBEvent, parseDBPoll } from '../utils/request-utils';
 import { FieldValue } from 'firebase-admin/firestore';
 import usersService from './users-service';
 import { MessageCursor, getQueryForCursor } from '../pagination';
@@ -344,7 +345,7 @@ const getPoll = async (cid: string, pid: string) => {
         if (convo.polls) {
             const matches = convo.polls.filter((poll) => poll.id === pid);
             if (matches.length > 0) {
-                return matches[0];
+                return parseDBPoll(matches[0] as any);
             }
         }
         return Promise.reject('poll not found');
@@ -382,7 +383,7 @@ const getEvent = async (cid: string, eid: string) => {
         if (!convo.events) return Promise.reject('no such event');
         const matches = convo.events.filter((e) => e.id === eid);
         if (matches.length < 1) return Promise.reject('no such event');
-        return matches[0];
+        return parseDBEvent(matches[0] as any);
     } catch (err) {
         return Promise.reject(err);
     }

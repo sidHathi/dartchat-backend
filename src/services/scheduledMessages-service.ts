@@ -74,12 +74,16 @@ const scheduledMessagesService: ScheduledMessagesService = {
     },
     addMessage(cid: string, message: Message, time: Date) {
         if (!message) return;
+        const timedMessage = {
+            ...message,
+            timestamp: time
+        } as Message;
         try {
-            if (!this.scheduledMessages?.find((m) => m && m.name === message.id)) {
+            if (!this.scheduledMessages?.find((m) => m && m.name === timedMessage.id)) {
                 const scMessage: ScheduledMessage = {
-                    id: message.id,
+                    id: timedMessage.id,
                     cid,
-                    message,
+                    message: timedMessage,
                     time
                 };
                 scheduleCol
