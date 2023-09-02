@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.chunk = exports.parsePoll = exports.parseCalEvent = exports.parseDBUserData = exports.parseDBMessage = exports.parseRequestMessage = exports.getErrorMessage = exports.cleanUndefinedFields = void 0;
+exports.parseEvent = exports.chunk = exports.parsePoll = exports.parseCalEvent = exports.parseDBUserData = exports.parseDBSCMessage = exports.parseDBMessage = exports.parseRequestMessage = exports.getErrorMessage = exports.cleanUndefinedFields = void 0;
 const cleanUndefinedFields = (obj) => {
     if (!obj)
         return obj;
@@ -24,6 +24,12 @@ const parseDBMessage = (message) => {
     return Object.assign(Object.assign({}, message), { timestamp: message.timestamp.toDate() });
 };
 exports.parseDBMessage = parseDBMessage;
+const parseDBSCMessage = (message) => {
+    if (!message.time || !message.time.toDate)
+        return message;
+    return Object.assign(Object.assign({}, message), { time: message.time.toDate() });
+};
+exports.parseDBSCMessage = parseDBSCMessage;
 const parseDBUserData = (user) => {
     return Object.assign(Object.assign({}, user), { conversations: user.conversations
             ? user.conversations.map((c) => (Object.assign(Object.assign({}, c), { lastMessageTime: c.lastMessageTime.toDate(), lastMessage: c.lastMessage ? (0, exports.parseDBMessage)(c.lastMessage) : undefined })))
@@ -60,3 +66,14 @@ const chunk = (arr, chunkSize) => {
     return chunks;
 };
 exports.chunk = chunk;
+const parseEvent = (rawEvent) => {
+    try {
+        const parsedDate = new Date(Date.parse(rawEvent.date));
+        const parsedReminders = rawEvent.reminders.map((r) => new Date(Date.parse(r)));
+        return Object.assign(Object.assign({}, rawEvent), { date: parsedDate, reminders: parsedReminders });
+    }
+    catch (err) {
+        return rawEvent;
+    }
+};
+exports.parseEvent = parseEvent;

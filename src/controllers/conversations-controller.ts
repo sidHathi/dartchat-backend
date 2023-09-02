@@ -1,8 +1,16 @@
 import { RequestHandler } from 'express';
 import { conversationsService, messagesService, secretsService, usersService } from '../services';
-import { CalendarEvent, Conversation, Message, Poll, UserConversationProfile, UserProfile } from '../models';
+import {
+    CalendarEvent,
+    Conversation,
+    Message,
+    Poll,
+    RawCalendarEvent,
+    UserConversationProfile,
+    UserProfile
+} from '../models';
 import { MessageCursor, encodeCursor, getNextCursor, getCursorForQuery } from '../pagination';
-import { getErrorMessage } from '../utils/request-utils';
+import { getErrorMessage, parseEvent, parsePoll } from '../utils/request-utils';
 import { cleanConversation, getProfileForUser } from '../utils/conversation-utils';
 
 const messageTransferLimit = 10000;
@@ -223,7 +231,7 @@ const leaveConvo: RequestHandler = async (req, res, next) => {
 const addPoll: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id;
-        const poll = req.body as Poll;
+        const poll = parsePoll(req.body) as Poll;
         const updateRes = await conversationsService.addPoll(cid, poll);
         if (updateRes) {
             res.status(200).send(updateRes);
@@ -269,7 +277,7 @@ const getPoll: RequestHandler = async (req, res, next) => {
 const addEvent: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id;
-        const event = req.body as CalendarEvent;
+        const event = parseEvent(req.body as RawCalendarEvent);
         const updateRes = await conversationsService.addEvent(cid, event);
         if (updateRes) {
             res.status(200).send(updateRes);

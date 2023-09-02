@@ -5,6 +5,7 @@ import { Message, ScheduledMessage } from '../models';
 import messagesService from './messages-service';
 import { Job, scheduleJob } from 'node-schedule';
 import { PushNotificationsService } from './pushNotifications-service';
+import { parseDBSCMessage } from '../utils/request-utils';
 
 const scheduleCol = db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages-dev');
 
@@ -52,7 +53,7 @@ const scheduledMessagesService: ScheduledMessagesService = {
                 .then((docs) => {
                     const idSet = new Set<string>([]);
                     docs.forEach((doc) => {
-                        const message = doc.data() as ScheduledMessage;
+                        const message = parseDBSCMessage(doc.data()) as ScheduledMessage;
                         if (message && idSet.has(message.id)) {
                             return;
                         }

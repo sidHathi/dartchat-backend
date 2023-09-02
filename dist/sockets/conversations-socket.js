@@ -29,6 +29,9 @@ const newConversation = (socket, newConvo, userSocketMap, recipientKeyMap, pnSer
         socket.emit('conversationReceived', newConvo);
         socket.join(newConvo.id);
         if (pnService) {
+            if (newConvo.publicKey && recipientKeyMap) {
+                yield pnService.pushNewSecrets(newConvo, user.uid, newConvo.publicKey, recipientKeyMap);
+            }
             yield pnService.pushNewConvo(newConvo, user.uid, recipientKeyMap);
         }
         return newConvo;
@@ -106,7 +109,7 @@ const newParticipants = (socket, cid, profiles, userSocketMap, userKeyMap, pnSer
         if (p.id !== senderId) {
             yield services_1.systemMessagingService.handleUserAdded(convo, p.id, senderId, socket);
             if (userKeyMap) {
-                services_1.secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
+                yield services_1.secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
             }
         }
         else {
