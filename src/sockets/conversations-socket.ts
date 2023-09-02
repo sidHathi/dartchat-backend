@@ -35,6 +35,9 @@ const newConversation = async (
         socket.emit('conversationReceived', newConvo);
         socket.join(newConvo.id);
         if (pnService) {
+            if (newConvo.publicKey && recipientKeyMap) {
+                await pnService.pushNewSecrets(newConvo, user.uid, newConvo.publicKey, recipientKeyMap);
+            }
             await pnService.pushNewConvo(newConvo, user.uid, recipientKeyMap);
         }
         return newConvo;
@@ -133,7 +136,7 @@ const newParticipants = async (
             if (p.id !== senderId) {
                 await systemMessagingService.handleUserAdded(convo, p.id, senderId, socket);
                 if (userKeyMap) {
-                    secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
+                    await secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
                 }
             } else {
                 await systemMessagingService.handleUserJoins(convo, p, socket);
