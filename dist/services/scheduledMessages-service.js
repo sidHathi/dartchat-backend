@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const firebase_1 = require("../firebase");
 const messages_service_1 = __importDefault(require("./messages-service"));
 const node_schedule_1 = require("node-schedule");
-const scheduleCol = firebase_1.db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages');
+const scheduleCol = firebase_1.db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages-dev');
 const scheduledMessagesService = {
     scheduledMessages: null,
     socketServer: null,

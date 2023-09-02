@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const firebase_1 = require("../firebase");
 const request_utils_1 = require("../utils/request-utils");
 const firestore_1 = require("firebase-admin/firestore");
-const profilesCol = firebase_1.db.collection(process.env.FIREBASE_PROFILES_COL || 'profiles');
+const profilesCol = firebase_1.db.collection(process.env.FIREBASE_PROFILES_COL || 'profiles-dev');
 const createNewProfile = (newUser) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         if (!newUser.id)

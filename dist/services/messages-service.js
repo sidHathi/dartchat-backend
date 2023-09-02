@@ -18,8 +18,8 @@ const pagination_1 = require("../pagination");
 const uuid_1 = require("uuid");
 const conversation_utils_1 = require("../utils/conversation-utils");
 const secrets_service_1 = __importDefault(require("./secrets-service"));
-const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations');
-const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users');
+const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations-dev');
+const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users-dev');
 const generateConversationInitMessage = (newConversation, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const timestamp = new Date();
     const messageType = 'system';

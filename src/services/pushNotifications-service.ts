@@ -143,6 +143,7 @@ const pushNotificationsService: PushNotificationsService = {
             await Promise.all(
                 recipientIds.map(async (id) => {
                     if (!Object.keys(recipientTokenMap).includes(id)) return;
+                    if (recipientTokenMap[id].length < 1) return;
                     const hasKeyMap = userKeyMap && userKeyMap[id] !== undefined;
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data: PNPacket = {
@@ -283,6 +284,7 @@ const pushNotificationsService: PushNotificationsService = {
             await Promise.all(
                 recipientIds.map(async (id: string) => {
                     if (!(id in recipientTokenMap)) return;
+                    if (recipientTokenMap[id].length < 1) return;
                     const hasKeyMap = userKeyMap && id in userKeyMap;
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data: PNPacket = {
@@ -328,6 +330,7 @@ const pushNotificationsService: PushNotificationsService = {
             await Promise.all(
                 recipientIds.map(async (id: string) => {
                     if (!(id in recipientTokenMap) || !(id in newKeyMap)) return;
+                    if (recipientTokenMap[id].length < 1) return;
                     const keyMapForUser = { [id]: newKeyMap[id] };
                     const data: PNPacket = {
                         type: 'secrets',
@@ -365,6 +368,7 @@ const pushNotificationsService: PushNotificationsService = {
         try {
             const recipientIds = convo.participants.filter((p) => p.id !== senderId).map((p) => p.id);
             const recipientTokens = await this.getRecipientTokens(recipientIds);
+            if (recipientTokens.length < 1) return;
 
             const data: PNPacket = {
                 type: 'deleteMessage',
@@ -388,12 +392,20 @@ const pushNotificationsService: PushNotificationsService = {
         try {
             const recipientIds = convo.participants.map((p) => p.id);
             const recipientTokens = await this.getRecipientTokens(recipientIds);
+            if (recipientTokens.length < 1) return;
 
             const data: PNPacket = {
                 type: 'message',
                 stringifiedBody: JSON.stringify({
                     cid: convo.id,
-                    message
+                    message: {
+                        ...message,
+                        senderProfile: message.senderProfile
+                            ? {
+                                  displayName: message.senderProfile.displayName
+                              }
+                            : undefined
+                    } as Message
                 })
             };
 
