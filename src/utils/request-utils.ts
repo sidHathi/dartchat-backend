@@ -42,10 +42,10 @@ export const parseDBMessage = (message: DBMessage): Message => {
 };
 
 export const parseDBSCMessage = (message: any): ScheduledMessage => {
-    if (!message.date || !message.date.toDate) return message as ScheduledMessage;
+    if (!message.time || !message.time.toDate) return message as ScheduledMessage;
     return {
         ...message,
-        date: message.date.toDate()
+        time: message.time.toDate()
     } as ScheduledMessage;
 };
 
