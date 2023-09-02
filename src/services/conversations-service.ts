@@ -250,9 +250,12 @@ const updateUserNotStatus = async (cid: string, uid: string, newStatus: Notifica
     }
 };
 
-const addUsers = async (cid: string, profiles: UserConversationProfile[]) => {
+const addUsers = async (cid: string, profiles: UserConversationProfile[], userKeyMap?: { [id: string]: string }) => {
     try {
         const initialConvo = await getConversationInfo(cid);
+        if (userKeyMap) {
+            await secretsService.addUserSecretsForNewParticipants(initialConvo, profiles, userKeyMap);
+        }
         const correctlyPermissionedProfiles = profiles.map((p) => {
             const isAdmin = initialConvo.adminIds?.includes(p.id);
             if (p.role === 'admin' && !isAdmin) {

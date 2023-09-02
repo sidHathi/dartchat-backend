@@ -74,22 +74,26 @@ const scheduledMessagesService: ScheduledMessagesService = {
     },
     addMessage(cid: string, message: Message, time: Date) {
         if (!message) return;
-        if (!this.scheduledMessages?.find((m) => m && m.name === message.id)) {
-            const scMessage: ScheduledMessage = {
-                id: message.id,
-                cid,
-                message,
-                time
-            };
-            scheduleCol
-                .doc(message.id)
-                .set(scMessage)
-                .then(() => {
-                    this.scheduleSend(scMessage);
-                })
-                .catch((err) => {
-                    console.log(err);
-                });
+        try {
+            if (!this.scheduledMessages?.find((m) => m && m.name === message.id)) {
+                const scMessage: ScheduledMessage = {
+                    id: message.id,
+                    cid,
+                    message,
+                    time
+                };
+                scheduleCol
+                    .doc(message.id)
+                    .set(scMessage)
+                    .then(() => {
+                        this.scheduleSend(scMessage);
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                    });
+            }
+        } catch (err) {
+            console.log(err);
         }
     },
     removeMessage(mid: string) {

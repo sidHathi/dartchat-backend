@@ -170,9 +170,17 @@ const updateUserNotStatus: RequestHandler = async (req, res, next) => {
 const addUsers: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id as string;
-        const newUserProfiles = req.body as UserConversationProfile[];
-        const additionRes = await conversationsService.addUsers(cid, newUserProfiles);
-        res.status(200).send(additionRes);
+        // legacy:
+        if (!req.body.profiles) {
+            const newUserProfiles = req.body as UserConversationProfile[];
+            const additionRes = await conversationsService.addUsers(cid, newUserProfiles);
+            res.status(200).send(additionRes);
+        } else {
+            const profiles = req.body.profiles as UserConversationProfile[];
+            const userKeyMap = req.body.userKeyMap as { [id: string]: string } | undefined;
+            const additionRes = await conversationsService.addUsers(cid, profiles, userKeyMap);
+            res.status(200).send(additionRes);
+        }
     } catch (err) {
         next(err);
     }
