@@ -6,7 +6,7 @@ import UserProfile from './UserProfile';
 import SocketEvent from './SocketEvent';
 import AvatarImage from './AvatarImage';
 import UserConversationProfile, { NotificationStatus, ChatRole } from './UserConversationProfile';
-import { Poll, CalendarEvent, LikeIcon } from './MessageObjects';
+import { Poll, CalendarEvent, LikeIcon, RawCalendarEvent, RawPoll } from './MessageObjects';
 import ScheduledMessage from './ScheduledMessage';
 import KeyInfo from './KeyInfo';
 
@@ -31,5 +31,7 @@ export {
     KeyInfo,
     ChatRole,
     DecryptedMessage,
-    EncryptedMessage
+    EncryptedMessage,
+    RawCalendarEvent,
+    RawPoll
 };

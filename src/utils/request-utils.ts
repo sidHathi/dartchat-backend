@@ -7,7 +7,10 @@ import {
     UserData,
     DBConversationPreview,
     CalendarEvent,
-    Poll
+    Poll,
+    RawCalendarEvent,
+    RawPoll,
+    ScheduledMessage
 } from '../models';
 
 export const cleanUndefinedFields = (obj: any) => {
@@ -36,6 +39,14 @@ export const parseDBMessage = (message: DBMessage): Message => {
         ...message,
         timestamp: message.timestamp.toDate()
     } as Message;
+};
+
+export const parseDBSCMessage = (message: any): ScheduledMessage => {
+    if (!message.date || !message.date.toDate) return message as ScheduledMessage;
+    return {
+        ...message,
+        date: message.date.toDate()
+    } as ScheduledMessage;
 };
 
 export const parseDBUserData = (user: DBUserData): UserData => {
@@ -82,4 +93,18 @@ export const chunk = <T>(arr: T[], chunkSize: number) => {
         chunks.push(arrChunk);
     }
     return chunks;
+};
+
+export const parseEvent = (rawEvent: RawCalendarEvent) => {
+    try {
+        const parsedDate = new Date(Date.parse(rawEvent.date));
+        const parsedReminders = rawEvent.reminders.map((r) => new Date(Date.parse(r)));
+        return {
+            ...rawEvent,
+            date: parsedDate,
+            reminders: parsedReminders
+        };
+    } catch (err) {
+        return rawEvent as any;
+    }
 };

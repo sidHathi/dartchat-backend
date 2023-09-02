@@ -15,11 +15,36 @@ export type Poll = {
     messageLink?: string;
 };
 
+export type RawPoll = {
+    id: string;
+    multiChoice: boolean;
+    question: string;
+    media?: MessageMedia[];
+    options: {
+        idx: number;
+        value: string;
+        voters: string[];
+    }[];
+    expirationDate: string;
+    messageId?: string;
+    messageLink?: string;
+};
+
 export type CalendarEvent = {
     id: string;
     name: string;
     date: Date;
     reminders: Date[];
+    going: string[];
+    notGoing: string[];
+    messageLink?: string;
+};
+
+export type RawCalendarEvent = {
+    id: string;
+    name: string;
+    date: string;
+    reminders: string[];
     going: string[];
     notGoing: string[];
     messageLink?: string;
