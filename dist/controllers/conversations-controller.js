@@ -224,7 +224,7 @@ const leaveConvo = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 const addPoll = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const cid = req.params.id;
-        const poll = req.body;
+        const poll = (0, request_utils_1.parsePoll)(req.body);
         const updateRes = yield services_1.conversationsService.addPoll(cid, poll);
         if (updateRes) {
             res.status(200).send(updateRes);
@@ -270,7 +270,7 @@ const getPoll = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
 const addEvent = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const cid = req.params.id;
-        const event = req.body;
+        const event = (0, request_utils_1.parseEvent)(req.body);
         const updateRes = yield services_1.conversationsService.addEvent(cid, event);
         if (updateRes) {
             res.status(200).send(updateRes);

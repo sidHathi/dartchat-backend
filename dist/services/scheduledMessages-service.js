@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const firebase_1 = require("../firebase");
 const messages_service_1 = __importDefault(require("./messages-service"));
 const node_schedule_1 = require("node-schedule");
+const request_utils_1 = require("../utils/request-utils");
 const scheduleCol = firebase_1.db.collection(process.env.FIREBASE_SCM_COL || 'scheduledMessages-dev');
 const scheduledMessagesService = {
     scheduledMessages: null,
@@ -51,7 +52,7 @@ const scheduledMessagesService = {
                 .then((docs) => {
                 const idSet = new Set([]);
                 docs.forEach((doc) => {
-                    const message = doc.data();
+                    const message = (0, request_utils_1.parseDBSCMessage)(doc.data());
                     if (message && idSet.has(message.id)) {
                         return;
                     }
