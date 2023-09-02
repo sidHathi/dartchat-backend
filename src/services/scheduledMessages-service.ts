@@ -28,6 +28,7 @@ const scheduledMessagesService: ScheduledMessagesService = {
         if (!this.scheduledMessages) return;
         const sendJob = scheduleJob(scMessage.id, scMessage.time, async () => {
             try {
+                if (Math.abs(new Date().getTime() - scMessage.time.getTime()) > 1000 * 60 * 6) return;
                 await messagesService.storeNewMessage(scMessage.cid, scMessage.message);
                 if (this.socketServer) {
                     this.socketServer.to(scMessage.cid).emit('newMessage', scMessage.cid, scMessage.message);
@@ -72,7 +73,8 @@ const scheduledMessagesService: ScheduledMessagesService = {
         this.socketServer = server;
     },
     addMessage(cid: string, message: Message, time: Date) {
-        if (!this.scheduledMessages?.find((m) => m.name === message.id)) {
+        if (!message) return;
+        if (!this.scheduledMessages?.find((m) => m && m.name === message.id)) {
             const scMessage: ScheduledMessage = {
                 id: message.id,
                 cid,
