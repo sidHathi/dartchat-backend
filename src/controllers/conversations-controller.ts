@@ -170,9 +170,17 @@ const updateUserNotStatus: RequestHandler = async (req, res, next) => {
 const addUsers: RequestHandler = async (req, res, next) => {
     try {
         const cid = req.params.id as string;
-        const newUserProfiles = req.body as UserConversationProfile[];
-        const additionRes = await conversationsService.addUsers(cid, newUserProfiles);
-        res.status(200).send(additionRes);
+        // legacy:
+        if (!req.body.profiles) {
+            const newUserProfiles = req.body as UserConversationProfile[];
+            const additionRes = await conversationsService.addUsers(cid, newUserProfiles);
+            res.status(200).send(additionRes);
+        } else {
+            const profiles = req.body.profiles as UserConversationProfile[];
+            const userKeyMap = req.body.userKeyMap as { [id: string]: string } | undefined;
+            const additionRes = await conversationsService.addUsers(cid, profiles, userKeyMap);
+            res.status(200).send(additionRes);
+        }
     } catch (err) {
         next(err);
     }
@@ -392,6 +400,7 @@ const changeEncryptionKey: RequestHandler = async (req, res, next) => {
         const convo = await conversationsService.getConversationInfo(cid);
         if (await secretsService.changeEncryptionKey(convo, publicKey, uid, userKeyMap, keyInfo)) {
             res.status(200).send();
+            return;
         }
         res.status(400).send('Key update failed');
     } catch (err) {
