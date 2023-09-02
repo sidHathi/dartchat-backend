@@ -15,9 +15,9 @@ import { ScheduledMessagesService } from './scheduledMessages-service';
 import { PushNotificationsService } from './pushNotifications-service';
 import { cleanUndefinedFields } from '../utils/request-utils';
 
-const genSystemMessage = (content: string, refId?: string, link?: string): Message => {
+const genSystemMessage = (content: string, refId?: string, link?: string, customTime?: Date): Message => {
     return cleanUndefinedFields({
-        timestamp: new Date(),
+        timestamp: customTime || new Date(),
         messageType: 'system',
         encryptionLevel: 'none',
         content,
@@ -51,12 +51,19 @@ const sendSystemMessage = async (
     }
 };
 
-const getEventReminderMessage = (eid: string, eventName: string, reminderTime: string, link?: string) => {
+const getEventReminderMessage = (
+    eid: string,
+    eventName: string,
+    reminderTimeString: string,
+    reminderTimeDate: Date,
+    link?: string
+) => {
     // this should be basic -> just add the reminder message to the chat
     const message: Message = genSystemMessage(
-        `${eventName} is starting ${reminderTime}`,
-        `${eid}-${reminderTime}`,
-        link
+        `${eventName} is starting ${reminderTimeString}`,
+        `${eid}-${reminderTimeString}`,
+        link,
+        reminderTimeDate
     );
     return message;
 };
@@ -111,7 +118,7 @@ const scheduleEvent = (cid: string, event: CalendarEvent, scmService: ScheduledM
     event.reminders.map((time: Date) => {
         const timeString = getTimeStringForReminder(time, event.date);
         if (timeString) {
-            const message = getEventReminderMessage(event.id, event.name, timeString, event.messageLink);
+            const message = getEventReminderMessage(event.id, event.name, timeString, event.date, event.messageLink);
             scmService.addMessage(cid, message, time);
         }
     });

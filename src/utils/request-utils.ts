@@ -12,6 +12,7 @@ import {
     RawPoll,
     ScheduledMessage
 } from '../models';
+import { DBCalendarEvent, DBPoll } from 'models/MessageObjects';
 
 export const cleanUndefinedFields = (obj: any) => {
     if (!obj) return obj;
@@ -106,5 +107,31 @@ export const parseEvent = (rawEvent: RawCalendarEvent) => {
         };
     } catch (err) {
         return rawEvent as any;
+    }
+};
+
+export const parseDBEvent = (dbEvent: DBCalendarEvent) => {
+    try {
+        const parsedDate = dbEvent.date.toDate();
+        const parsedReminders = dbEvent.reminders.map((r) => r.toDate());
+        return {
+            ...dbEvent,
+            date: parsedDate,
+            reminders: parsedReminders
+        };
+    } catch (err) {
+        return dbEvent as any;
+    }
+};
+
+export const parseDBPoll = (dbPoll: DBPoll) => {
+    try {
+        const parsedDate = dbPoll.expirationDate.toDate();
+        return {
+            ...dbPoll,
+            expirationDate: parsedDate
+        } as Poll;
+    } catch (err) {
+        return dbPoll as any;
     }
 };
