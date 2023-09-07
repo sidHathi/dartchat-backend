@@ -226,9 +226,12 @@ const updateUserNotStatus = (cid, uid, newStatus) => __awaiter(void 0, void 0, v
         return Promise.reject(err);
     }
 });
-const addUsers = (cid, profiles) => __awaiter(void 0, void 0, void 0, function* () {
+const addUsers = (cid, profiles, userKeyMap) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const initialConvo = yield getConversationInfo(cid);
+        if (userKeyMap) {
+            yield secrets_service_1.default.addUserSecretsForNewParticipants(initialConvo, profiles, userKeyMap);
+        }
         const correctlyPermissionedProfiles = profiles.map((p) => {
             var _a;
             const isAdmin = (_a = initialConvo.adminIds) === null || _a === void 0 ? void 0 : _a.includes(p.id);
@@ -314,7 +317,7 @@ const getPoll = (cid, pid) => __awaiter(void 0, void 0, void 0, function* () {
         if (convo.polls) {
             const matches = convo.polls.filter((poll) => poll.id === pid);
             if (matches.length > 0) {
-                return matches[0];
+                return (0, request_utils_1.parseDBPoll)(matches[0]);
             }
         }
         return Promise.reject('poll not found');
@@ -355,7 +358,7 @@ const getEvent = (cid, eid) => __awaiter(void 0, void 0, void 0, function* () {
         const matches = convo.events.filter((e) => e.id === eid);
         if (matches.length < 1)
             return Promise.reject('no such event');
-        return matches[0];
+        return (0, request_utils_1.parseDBEvent)(matches[0]);
     }
     catch (err) {
         return Promise.reject(err);

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseEvent = exports.chunk = exports.parsePoll = exports.parseCalEvent = exports.parseDBUserData = exports.parseDBSCMessage = exports.parseDBMessage = exports.parseRequestMessage = exports.getErrorMessage = exports.cleanUndefinedFields = void 0;
+exports.parseDBPoll = exports.parseDBEvent = exports.parseEvent = exports.chunk = exports.parsePoll = exports.parseCalEvent = exports.parseDBUserData = exports.parseDBSCMessage = exports.parseDBMessage = exports.parseRequestMessage = exports.getErrorMessage = exports.cleanUndefinedFields = void 0;
 const cleanUndefinedFields = (obj) => {
     if (!obj)
         return obj;
@@ -77,3 +77,24 @@ const parseEvent = (rawEvent) => {
     }
 };
 exports.parseEvent = parseEvent;
+const parseDBEvent = (dbEvent) => {
+    try {
+        const parsedDate = dbEvent.date.toDate();
+        const parsedReminders = dbEvent.reminders.map((r) => r.toDate());
+        return Object.assign(Object.assign({}, dbEvent), { date: parsedDate, reminders: parsedReminders });
+    }
+    catch (err) {
+        return dbEvent;
+    }
+};
+exports.parseDBEvent = parseDBEvent;
+const parseDBPoll = (dbPoll) => {
+    try {
+        const parsedDate = dbPoll.expirationDate.toDate();
+        return Object.assign(Object.assign({}, dbPoll), { expirationDate: parsedDate });
+    }
+    catch (err) {
+        return dbPoll;
+    }
+};
+exports.parseDBPoll = parseDBPoll;

@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const users_service_1 = __importDefault(require("./users-service"));
 const conversations_service_1 = __importDefault(require("./conversations-service"));
 const firebase_1 = __importDefault(require("../firebase"));
-const request_utils_1 = require("../utils/request-utils");
 const pushNotificationsService = {
     handledEvents: null,
     init() {
@@ -56,7 +55,25 @@ const pushNotificationsService = {
             }
         });
     },
+    getMessageBody(message) {
+        if (message.encryptionLevel === 'none') {
+            const decryptedCast = message;
+            if (decryptedCast.content !== undefined) {
+                let body = '';
+                if (decryptedCast.content.length > 0) {
+                    body = decryptedCast.content;
+                }
+                else if (decryptedCast.media) {
+                    body = 'Media: ';
+                }
+                return body;
+            }
+            return undefined;
+        }
+        return undefined;
+    },
     pushMessage(cid, message) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.handledEvents || this.handledEvents.has(message.id))
                 return;
@@ -67,7 +84,9 @@ const pushNotificationsService = {
                     return p.id !== message.senderId;
                 });
                 const recipientIds = recipientProfiles.map((p) => p.id);
-                const recipientTokens = yield this.getRecipientTokens(recipientIds);
+                if (recipientIds.length < 1)
+                    return;
+                const recipientTokenMap = yield this.getRecipientTokenMap(recipientIds);
                 const data = {
                     type: 'message',
                     stringifiedBody: JSON.stringify({
@@ -75,29 +94,55 @@ const pushNotificationsService = {
                         cid
                     })
                 };
-                yield firebase_1.default.messaging().sendEachForMulticast({
-                    tokens: recipientTokens,
-                    data,
-                    android: {
-                        priority: 'high'
-                    },
-                    apns: {
-                        payload: {
-                            aps: {
-                                contentAvailable: true,
-                                mutableContent: true,
-                                sound: 'default'
-                            },
-                            notifee_options: Object.assign(Object.assign({}, data), { ios: {
-                                    foregroundPresentationOptions: {
-                                        alert: true,
-                                        badge: true,
-                                        sound: true
-                                    }
-                                } })
+                const notification = {
+                    title: `${convo.group && message.senderProfile ? convo.name : (_a = message.senderProfile) === null || _a === void 0 ? void 0 : _a.displayName}`,
+                    body: `${convo.group && message.senderProfile ? message.senderProfile.displayName + ': ' : ''}${this.getMessageBody(message) || 'encrypted message'}`
+                };
+                yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
+                    var _b;
+                    if (!Object.keys(recipientTokenMap).includes(id))
+                        return;
+                    if (recipientTokenMap[id].length < 1)
+                        return;
+                    const userProfile = convo.participants.find((p) => p.id === id);
+                    if ((userProfile === null || userProfile === void 0 ? void 0 : userProfile.notifications) && userProfile.notifications !== 'all') {
+                        if (userProfile.notifications === 'none') {
+                            return;
+                        }
+                        else if (userProfile.notifications === 'mentions') {
+                            const mentioned = (_b = message.mentions) === null || _b === void 0 ? void 0 : _b.find((m) => m.id === id);
+                            if (!mentioned)
+                                return;
                         }
                     }
-                });
+                    yield firebase_1.default.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data: {
+                            mid: message.id
+                        },
+                        notification,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true,
+                                    mutableContent: true,
+                                    sound: 'default'
+                                },
+                                notifee_options: Object.assign(Object.assign({}, data), { data: {
+                                        type: 'message',
+                                        cid,
+                                        mid: message.id
+                                    }, ios: {
+                                        sound: 'default',
+                                        interruptionLevel: 'active'
+                                    } })
+                            }
+                        }
+                    });
+                })));
             }
             catch (err) {
                 console.log(err);
@@ -133,14 +178,14 @@ const pushNotificationsService = {
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data = {
                         type: 'newConvo',
-                        stringifiedBody: JSON.stringify((0, request_utils_1.cleanUndefinedFields)({
-                            convo: (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, convo), { participants: convo.participants.filter((p) => p.id === id), keyInfo: undefined, messages: [], adminIds: undefined }))
-                        })),
-                        stringifiedDisplay: JSON.stringify(notification)
+                        stringifiedBody: JSON.stringify({
+                            cid: convo.id
+                        })
                     };
                     yield firebase_1.default.messaging().sendEachForMulticast({
                         tokens: recipientTokenMap[id],
                         data,
+                        notification,
                         android: {
                             priority: 'high'
                         },
@@ -151,13 +196,17 @@ const pushNotificationsService = {
                                     mutableContent: true,
                                     sound: 'default'
                                 },
-                                notifee_options: Object.assign(Object.assign({}, data), { ios: {
-                                        foregroundPresentationOptions: {
-                                            alert: true,
-                                            badge: true,
-                                            sound: true
-                                        }
-                                    } })
+                                notifee_options: {
+                                    type: 'newConvo',
+                                    data: {
+                                        type: 'newConvo',
+                                        cid: convo.id
+                                    },
+                                    ios: {
+                                        sound: 'default',
+                                        interruptionLevel: 'active'
+                                    }
+                                }
                             }
                         }
                     });
@@ -199,12 +248,12 @@ const pushNotificationsService = {
                         event,
                         senderId: userId,
                         mid: message.id
-                    }),
-                    stringifiedDisplay: JSON.stringify(notification)
+                    })
                 };
                 yield firebase_1.default.messaging().sendEachForMulticast({
                     tokens: recipientTokens,
                     data,
+                    notification,
                     android: {
                         priority: 'high'
                     },
@@ -215,13 +264,17 @@ const pushNotificationsService = {
                                 mutableContent: true,
                                 sound: 'default'
                             },
-                            notifee_options: Object.assign(Object.assign({}, data), { ios: {
-                                    foregroundPresentationOptions: {
-                                        alert: true,
-                                        badge: true,
-                                        sound: true
-                                    }
-                                } })
+                            notifee_options: {
+                                data: {
+                                    type: 'like',
+                                    cid,
+                                    mid: message.id
+                                },
+                                ios: {
+                                    sound: 'default',
+                                    interruptionLevel: 'active'
+                                }
+                            }
                         }
                     }
                 });
@@ -263,20 +316,32 @@ const pushNotificationsService = {
                     const data = {
                         type: 'addedToConvo',
                         stringifiedBody: JSON.stringify({
-                            convo: (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, convo), { participants: convo.participants.filter((p) => p.id === id), keyInfo: undefined }))
-                        }),
-                        stringifiedDisplay: JSON.stringify(notification)
+                            cid: convo.id
+                        })
                     };
                     yield firebase_1.default.messaging().sendEachForMulticast({
                         tokens: recipientTokenMap[id],
                         data,
+                        notification,
                         android: {
                             priority: 'high'
                         },
                         apns: {
                             payload: {
                                 aps: {
-                                    contentAvailable: true
+                                    contentAvailable: true,
+                                    mutableContent: true
+                                },
+                                notifee_options: {
+                                    type: 'addedToConvo',
+                                    data: {
+                                        type: 'addedToConvo',
+                                        cid: convo.id
+                                    },
+                                    ios: {
+                                        sound: 'default',
+                                        interruptionLevel: 'active'
+                                    }
                                 }
                             }
                         }

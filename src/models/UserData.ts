@@ -12,7 +12,7 @@ export type DBUserData = {
     avatar?: AvatarImage;
     conversations: DBConversationPreview[];
     contacts?: string[];
-    privateEncryptionKey?: string;
+    // privateEncryptionKey?: string;
     pushTokens?: string[];
     archivedConvos?: string[];
     publicKey?: string;
@@ -30,7 +30,7 @@ type UserData = {
     avatar?: AvatarImage;
     conversations: ConversationPreview[];
     contacts?: string[];
-    privateEncryptionKey?: string;
+    // privateEncryptionKey?: string;
     pushTokens?: string[];
     archivedConvos?: string[];
     publicKey?: string;

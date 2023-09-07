@@ -26,6 +26,8 @@ const scheduledMessagesService = {
             return;
         const sendJob = (0, node_schedule_1.scheduleJob)(scMessage.id, scMessage.time, () => __awaiter(this, void 0, void 0, function* () {
             try {
+                if (Math.abs(new Date().getTime() - scMessage.time.getTime()) > 1000 * 60 * 6)
+                    return;
                 yield messages_service_1.default.storeNewMessage(scMessage.cid, scMessage.message);
                 if (this.socketServer) {
                     this.socketServer.to(scMessage.cid).emit('newMessage', scMessage.cid, scMessage.message);
@@ -73,22 +75,30 @@ const scheduledMessagesService = {
     },
     addMessage(cid, message, time) {
         var _a;
-        if (!((_a = this.scheduledMessages) === null || _a === void 0 ? void 0 : _a.find((m) => m.name === message.id))) {
-            const scMessage = {
-                id: message.id,
-                cid,
-                message,
-                time
-            };
-            scheduleCol
-                .doc(message.id)
-                .set(scMessage)
-                .then(() => {
-                this.scheduleSend(scMessage);
-            })
-                .catch((err) => {
-                console.log(err);
-            });
+        if (!message)
+            return;
+        const timedMessage = Object.assign(Object.assign({}, message), { timestamp: time });
+        try {
+            if (!((_a = this.scheduledMessages) === null || _a === void 0 ? void 0 : _a.find((m) => m && m.name === timedMessage.id))) {
+                const scMessage = {
+                    id: timedMessage.id,
+                    cid,
+                    message: timedMessage,
+                    time
+                };
+                scheduleCol
+                    .doc(message.id)
+                    .set(scMessage)
+                    .then(() => {
+                    this.scheduleSend(scMessage);
+                })
+                    .catch((err) => {
+                    console.log(err);
+                });
+            }
+        }
+        catch (err) {
+            console.log(err);
         }
     },
     removeMessage(mid) {

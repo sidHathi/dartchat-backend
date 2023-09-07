@@ -6,12 +6,14 @@ import admin from '../firebase';
 import PNPacket from 'models/PNPacket';
 import { DecryptedMessage } from 'models/Message';
 import { cleanUndefinedFields } from '../utils/request-utils';
+import { Notification } from 'firebase-admin/lib/messaging/messaging-api';
 
 export type PushNotificationsService = {
     handledEvents: Set<string> | null;
     init: () => PushNotificationsService;
     getRecipientTokens: (userIds: string[]) => Promise<string[]>;
     getRecipientTokenMap: (userIds: string[]) => Promise<{ [id: string]: string[] }>;
+    getMessageBody: (message: Message) => string | undefined;
     pushMessage: (cid: string, message: Message) => Promise<void>;
     pushNewConvo: (convo: Conversation, userId: string, userKeyMap?: { [id: string]: string }) => Promise<void>;
     pushLike: (cid: string, message: Message, userId: string, event: SocketEvent) => Promise<void>;
@@ -70,6 +72,22 @@ const pushNotificationsService: PushNotificationsService = {
             return {};
         }
     },
+    getMessageBody(message: Message) {
+        if (message.encryptionLevel === 'none') {
+            const decryptedCast = message as DecryptedMessage;
+            if (decryptedCast.content !== undefined) {
+                let body = '';
+                if (decryptedCast.content.length > 0) {
+                    body = decryptedCast.content;
+                } else if (decryptedCast.media) {
+                    body = 'Media: ';
+                }
+                return body;
+            }
+            return undefined;
+        }
+        return undefined;
+    },
     async pushMessage(cid: string, message: Message) {
         if (!this.handledEvents || this.handledEvents.has(message.id)) return;
         this.handledEvents.add(message.id);
@@ -79,7 +97,9 @@ const pushNotificationsService: PushNotificationsService = {
                 return p.id !== message.senderId;
             });
             const recipientIds: string[] = recipientProfiles.map((p) => p.id);
-            const recipientTokens = await this.getRecipientTokens(recipientIds);
+            if (recipientIds.length < 1) return;
+            // const recipientTokens = await this.getRecipientTokens(recipientIds);
+            const recipientTokenMap = await this.getRecipientTokenMap(recipientIds);
 
             const data: PNPacket = {
                 type: 'message',
@@ -89,33 +109,59 @@ const pushNotificationsService: PushNotificationsService = {
                 })
             };
 
-            await admin.messaging().sendEachForMulticast({
-                tokens: recipientTokens,
-                data,
-                android: {
-                    priority: 'high'
-                },
-                apns: {
-                    payload: {
-                        aps: {
-                            contentAvailable: true,
-                            mutableContent: true,
-                            sound: 'default'
+            const notification: Notification = {
+                title: `${convo.group && message.senderProfile ? convo.name : message.senderProfile?.displayName}`,
+                body: `${convo.group && message.senderProfile ? message.senderProfile.displayName + ': ' : ''}${
+                    this.getMessageBody(message) || 'encrypted message'
+                }`
+            };
+
+            await Promise.all(
+                recipientIds.map(async (id) => {
+                    if (!Object.keys(recipientTokenMap).includes(id)) return;
+                    if (recipientTokenMap[id].length < 1) return;
+                    const userProfile = convo.participants.find((p) => p.id === id);
+                    if (userProfile?.notifications && userProfile.notifications !== 'all') {
+                        if (userProfile.notifications === 'none') {
+                            return;
+                        } else if (userProfile.notifications === 'mentions') {
+                            const mentioned = message.mentions?.find((m) => m.id === id);
+                            if (!mentioned) return;
+                        }
+                    }
+                    await admin.messaging().sendEachForMulticast({
+                        tokens: recipientTokenMap[id],
+                        data: {
+                            mid: message.id
                         },
-                        notifee_options: {
-                            ...data,
-                            ios: {
-                                foregroundPresentationOptions: {
-                                    alert: true,
-                                    badge: true,
-                                    sound: true
+                        notification,
+                        android: {
+                            priority: 'high'
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    contentAvailable: true,
+                                    mutableContent: true,
+                                    sound: 'default'
+                                },
+                                notifee_options: {
+                                    ...data,
+                                    data: {
+                                        type: 'message',
+                                        cid,
+                                        mid: message.id
+                                    },
+                                    ios: {
+                                        sound: 'default',
+                                        interruptionLevel: 'active'
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-                // notification
-            });
+                    });
+                })
+            );
         } catch (err) {
             console.log(err);
             return;
@@ -148,24 +194,16 @@ const pushNotificationsService: PushNotificationsService = {
                     const keyMapForUser = hasKeyMap ? { [id]: userKeyMap[id] } : undefined;
                     const data: PNPacket = {
                         type: 'newConvo',
-                        stringifiedBody: JSON.stringify(
-                            cleanUndefinedFields({
-                                convo: cleanUndefinedFields({
-                                    ...convo,
-                                    participants: convo.participants.filter((p) => p.id === id),
-                                    keyInfo: undefined,
-                                    messages: [],
-                                    adminIds: undefined
-                                }) as Conversation
-                                // userKeyMap: cleanUndefinedFields(keyMapForUser) || {}
-                            })
-                        ),
-                        stringifiedDisplay: JSON.stringify(notification)
+                        stringifiedBody: JSON.stringify({
+                            cid: convo.id
+                        })
+                        // stringifiedDisplay: JSON.stringify(notification)
                     };
 
                     await admin.messaging().sendEachForMulticast({
                         tokens: recipientTokenMap[id],
                         data,
+                        notification,
                         android: {
                             priority: 'high'
                         },
@@ -177,13 +215,14 @@ const pushNotificationsService: PushNotificationsService = {
                                     sound: 'default'
                                 },
                                 notifee_options: {
-                                    ...data,
+                                    type: 'newConvo',
+                                    data: {
+                                        type: 'newConvo',
+                                        cid: convo.id
+                                    },
                                     ios: {
-                                        foregroundPresentationOptions: {
-                                            alert: true,
-                                            badge: true,
-                                            sound: true
-                                        }
+                                        sound: 'default',
+                                        interruptionLevel: 'active'
                                     }
                                 }
                             }
@@ -211,7 +250,7 @@ const pushNotificationsService: PushNotificationsService = {
 
             if (recipientTokens.length < 1) return;
 
-            const notification = {
+            const notification: Notification = {
                 title: convo.name,
                 body: `${sender.displayName} liked your message`,
                 imageUrl: convo.avatar?.tinyUri || undefined
@@ -223,13 +262,13 @@ const pushNotificationsService: PushNotificationsService = {
                     event,
                     senderId: userId,
                     mid: message.id
-                }),
-                stringifiedDisplay: JSON.stringify(notification)
+                })
             };
 
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
                 data,
+                notification,
                 android: {
                     priority: 'high'
                 },
@@ -241,13 +280,14 @@ const pushNotificationsService: PushNotificationsService = {
                             sound: 'default'
                         },
                         notifee_options: {
-                            ...data,
+                            data: {
+                                type: 'like',
+                                cid,
+                                mid: message.id
+                            },
                             ios: {
-                                foregroundPresentationOptions: {
-                                    alert: true,
-                                    badge: true,
-                                    sound: true
-                                }
+                                sound: 'default',
+                                interruptionLevel: 'active'
                             }
                         }
                     }
@@ -290,25 +330,32 @@ const pushNotificationsService: PushNotificationsService = {
                     const data: PNPacket = {
                         type: 'addedToConvo',
                         stringifiedBody: JSON.stringify({
-                            convo: cleanUndefinedFields({
-                                ...convo,
-                                participants: convo.participants.filter((p) => p.id === id),
-                                keyInfo: undefined
-                            }) as Conversation
-                            // userKeyMap: keyMapForUser
-                        }),
-                        stringifiedDisplay: JSON.stringify(notification)
+                            cid: convo.id
+                        })
                     };
                     await admin.messaging().sendEachForMulticast({
                         tokens: recipientTokenMap[id],
                         data,
+                        notification,
                         android: {
                             priority: 'high'
                         },
                         apns: {
                             payload: {
                                 aps: {
-                                    contentAvailable: true
+                                    contentAvailable: true,
+                                    mutableContent: true
+                                },
+                                notifee_options: {
+                                    type: 'addedToConvo',
+                                    data: {
+                                        type: 'addedToConvo',
+                                        cid: convo.id
+                                    },
+                                    ios: {
+                                        sound: 'default',
+                                        interruptionLevel: 'active'
+                                    }
                                 }
                             }
                         }
