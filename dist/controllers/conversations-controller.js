@@ -163,9 +163,17 @@ const updateUserNotStatus = (req, res, next) => __awaiter(void 0, void 0, void 0
 const addUsers = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const cid = req.params.id;
-        const newUserProfiles = req.body;
-        const additionRes = yield services_1.conversationsService.addUsers(cid, newUserProfiles);
-        res.status(200).send(additionRes);
+        if (!req.body.profiles) {
+            const newUserProfiles = req.body;
+            const additionRes = yield services_1.conversationsService.addUsers(cid, newUserProfiles);
+            res.status(200).send(additionRes);
+        }
+        else {
+            const profiles = req.body.profiles;
+            const userKeyMap = req.body.userKeyMap;
+            const additionRes = yield services_1.conversationsService.addUsers(cid, profiles, userKeyMap);
+            res.status(200).send(additionRes);
+        }
     }
     catch (err) {
         next(err);
@@ -383,6 +391,7 @@ const changeEncryptionKey = (req, res, next) => __awaiter(void 0, void 0, void 0
         const convo = yield services_1.conversationsService.getConversationInfo(cid);
         if (yield services_1.secretsService.changeEncryptionKey(convo, publicKey, uid, userKeyMap, keyInfo)) {
             res.status(200).send();
+            return;
         }
         res.status(400).send('Key update failed');
     }

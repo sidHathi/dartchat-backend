@@ -15,9 +15,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const messages_service_1 = __importDefault(require("./messages-service"));
 const uuid_1 = require("uuid");
 const request_utils_1 = require("../utils/request-utils");
-const genSystemMessage = (content, refId, link) => {
+const genSystemMessage = (content, refId, link, customTime) => {
     return (0, request_utils_1.cleanUndefinedFields)({
-        timestamp: new Date(),
+        timestamp: customTime || new Date(),
         messageType: 'system',
         encryptionLevel: 'none',
         content,
@@ -45,8 +45,8 @@ const sendSystemMessage = (message, convo, socket, pnService) => __awaiter(void 
         return undefined;
     }
 });
-const getEventReminderMessage = (eid, eventName, reminderTime, link) => {
-    const message = genSystemMessage(`${eventName} is starting ${reminderTime}`, `${eid}-${reminderTime}`, link);
+const getEventReminderMessage = (eid, eventName, reminderTimeString, reminderTimeDate, link) => {
+    const message = genSystemMessage(`${eventName} is starting ${reminderTimeString}`, `${eid}-${reminderTimeString}`, link, reminderTimeDate);
     return message;
 };
 const getTimeStringForReminder = (reminderDate, eventDate) => {
@@ -91,7 +91,7 @@ const scheduleEvent = (cid, event, scmService) => {
     event.reminders.map((time) => {
         const timeString = getTimeStringForReminder(time, event.date);
         if (timeString) {
-            const message = getEventReminderMessage(event.id, event.name, timeString, event.messageLink);
+            const message = getEventReminderMessage(event.id, event.name, timeString, event.date, event.messageLink);
             scmService.addMessage(cid, message, time);
         }
     });
