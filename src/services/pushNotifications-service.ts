@@ -13,6 +13,7 @@ export type PushNotificationsService = {
     init: () => PushNotificationsService;
     getRecipientTokens: (userIds: string[]) => Promise<string[]>;
     getRecipientTokenMap: (userIds: string[]) => Promise<{ [id: string]: string[] }>;
+    getMessageBody: (message: Message) => string | undefined;
     pushMessage: (cid: string, message: Message) => Promise<void>;
     pushNewConvo: (convo: Conversation, userId: string, userKeyMap?: { [id: string]: string }) => Promise<void>;
     pushLike: (cid: string, message: Message, userId: string, event: SocketEvent) => Promise<void>;
@@ -71,6 +72,22 @@ const pushNotificationsService: PushNotificationsService = {
             return {};
         }
     },
+    getMessageBody(message: Message) {
+        if (message.encryptionLevel === 'none') {
+            const decryptedCast = message as DecryptedMessage;
+            if (decryptedCast.content !== undefined) {
+                let body = '';
+                if (decryptedCast.content.length > 0) {
+                    body = decryptedCast.content;
+                } else if (decryptedCast.media) {
+                    body = 'Media: ';
+                }
+                return body;
+            }
+            return undefined;
+        }
+        return undefined;
+    },
     async pushMessage(cid: string, message: Message) {
         if (!this.handledEvents || this.handledEvents.has(message.id)) return;
         this.handledEvents.add(message.id);
@@ -94,9 +111,9 @@ const pushNotificationsService: PushNotificationsService = {
 
             const notification: Notification = {
                 title: `${convo.group && message.senderProfile ? convo.name : message.senderProfile?.displayName}`,
-                body: `${
-                    convo.group && message.senderProfile ? message.senderProfile.displayName + ': ' : ''
-                }encrypted message`
+                body: `${convo.group && message.senderProfile ? message.senderProfile.displayName + ': ' : ''}${
+                    this.getMessageBody(message) || 'encrypted message'
+                }`
             };
 
             await Promise.all(
