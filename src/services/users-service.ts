@@ -213,7 +213,7 @@ const handleConversationAdd = async (convo: Conversation, userId: string) => {
         const newPreview = cleanUndefinedFields({
             cid: convo.id,
             name: convo.name,
-            unSeenMesages: 0,
+            unSeenMessages: 0,
             avatar: convo.avatar,
             lastMessageTime: new Date(),
             publicKey: convo.publicKey
