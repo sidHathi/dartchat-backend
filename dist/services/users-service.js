@@ -207,7 +207,7 @@ const handleConversationAdd = (convo, userId) => __awaiter(void 0, void 0, void 
         const newPreview = (0, request_utils_1.cleanUndefinedFields)({
             cid: convo.id,
             name: convo.name,
-            unSeenMesages: 0,
+            unSeenMessages: 0,
             avatar: convo.avatar,
             lastMessageTime: new Date(),
             publicKey: convo.publicKey
