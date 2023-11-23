@@ -110,7 +110,11 @@ const pushNotificationsService: PushNotificationsService = {
             };
 
             const notification: Notification = {
-                title: `${convo.group && message.senderProfile ? convo.name : message.senderProfile?.displayName}`,
+                title: `${
+                    (convo.group && message.senderProfile) || message.messageType === 'system'
+                        ? convo.name
+                        : message.senderProfile?.displayName
+                }`,
                 body: `${convo.group && message.senderProfile ? message.senderProfile.displayName + ': ' : ''}${
                     this.getMessageBody(message) || 'encrypted message'
                 }`
@@ -441,6 +445,11 @@ const pushNotificationsService: PushNotificationsService = {
             const recipientTokens = await this.getRecipientTokens(recipientIds);
             if (recipientTokens.length < 1) return;
 
+            const notification: Notification = {
+                title: convo.name,
+                body: message.content
+            };
+
             const data: PNPacket = {
                 type: 'message',
                 stringifiedBody: JSON.stringify({
@@ -458,7 +467,8 @@ const pushNotificationsService: PushNotificationsService = {
 
             await admin.messaging().sendEachForMulticast({
                 tokens: recipientTokens,
-                data
+                data,
+                notification
             });
         } catch (err) {
             console.log(err);

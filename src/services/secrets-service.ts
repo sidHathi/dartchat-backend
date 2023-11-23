@@ -131,11 +131,15 @@ const addUserSecretsForNewParticipants = async (
         }
 
         const currentKeyInfo = convo.keyInfo;
+        const keySet = new Set(convo.keyInfo?.privilegedUsers || []);
         if (currentKeyInfo) {
             await conversationsCol.doc(convo.id).update({
                 keyInfo: {
                     ...currentKeyInfo,
-                    privilegedUsers: [...currentKeyInfo.privilegedUsers, ...Object.keys(userKeyMap)]
+                    privilegedUsers: [
+                        ...currentKeyInfo.privilegedUsers,
+                        ...Object.keys(userKeyMap).filter((key) => !keySet.has(key))
+                    ]
                 }
             });
         }
