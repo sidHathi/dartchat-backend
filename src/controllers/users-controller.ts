@@ -142,6 +142,22 @@ const updatePublicKey: RequestHandler = async (req, res, next) => {
     }
 };
 
+const updateUiTheme: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const newTheme = req.body.uiTheme;
+        const user = await usersService.getUser(uid);
+        const updatedUser = {
+            ...user,
+            uiTheme: newTheme
+        };
+        const updateRes = await usersService.updateUser(uid, updatedUser);
+        res.status(200).send(updateRes);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const usersController = {
     getCurrentUser,
     createNewUser,
@@ -151,7 +167,8 @@ const usersController = {
     readKeyUpdates,
     setKeySalt,
     setSecrets,
-    updatePublicKey
+    updatePublicKey,
+    updateUiTheme
 };
 
 export default usersController;
