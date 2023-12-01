@@ -127,17 +127,18 @@ const newParticipants = async (
     pnService?: PushNotificationsService
 ) => {
     // handle logic through http requests so permissions can be taken into account and error messages sent back if necessary
+    console.log(`userKeyMap: ${JSON.stringify(userKeyMap)}`);
     socket.to(cid).emit('newConversationUsers', cid, profiles);
     const senderId = socket.data.user.uid;
     const convo = await conversationsService.getConversationInfo(cid);
+    if (userKeyMap) {
+        await secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
+    }
     await Promise.all(
         profiles.map(async (p) => {
             socket.to(p.id).emit('newConversationUsers', cid, [], userKeyMap);
             if (p.id !== senderId) {
                 await systemMessagingService.handleUserAdded(convo, p.id, senderId, socket);
-                if (userKeyMap) {
-                    await secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
-                }
             } else {
                 await systemMessagingService.handleUserJoins(convo, p, socket);
             }

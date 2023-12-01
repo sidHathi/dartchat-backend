@@ -56,7 +56,7 @@ type ReplyRef = {
     id: string;
     content: string;
     senderId: string;
-    media?: string[];
+    media?: boolean;
 };
 
 export default Message;

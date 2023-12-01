@@ -11,9 +11,10 @@ import {
 import { parseRequestMessage, parseDBMessage, cleanUndefinedFields } from '../utils/request-utils';
 import { getQueryForCursor, MessageCursor } from '../pagination';
 import { v4 as uuid } from 'uuid';
-import { cleanConversation, hasPermissionForAction } from '../utils/conversation-utils';
+import { cleanConversation, getUserConversationAvatar, hasPermissionForAction } from '../utils/conversation-utils';
 import { DecryptedMessage, EncryptedMessage } from 'models/Message';
 import secretsService from './secrets-service';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const conversationsCol = db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations-dev');
 const usersCol = db.collection(process.env.FIREBASE_USERS_COL || 'users-dev');
@@ -41,53 +42,62 @@ const generateConversationInitMessage = async (newConversation: Conversation, us
     }
 };
 
-const handleUserConversationMessage = async (
-    cid: string,
-    cName: string,
-    group: boolean,
-    participantIds: string[],
-    message: Message
-) => {
+const handleUserConversationMessage = async (convo: Conversation, participantIds: string[], message: Message) => {
     try {
         participantIds.map(async (id) => {
             const userDoc = await usersCol.doc(id).get();
             if (userDoc.exists) {
                 const user = userDoc.data() as UserData;
                 let unSeenMessages = 0;
-                const matchingConvos = user.conversations.filter((c) => c.cid === cid);
+                const matchingConvos = user.conversations.filter((c) => c.cid === convo.id);
                 let avatar: AvatarImage | undefined;
-                let name = cName;
+                let name = convo.name;
                 let recipientId: string | undefined;
-                if (matchingConvos.length > 0) {
-                    unSeenMessages = matchingConvos[0].unSeenMessages;
-                    avatar = matchingConvos[0].avatar;
-                    if (!group) {
-                        name = matchingConvos[0].name;
-                        recipientId = matchingConvos[0].recipientId;
-                    }
-                } else {
-                    return;
-                }
                 const lastMessageContent =
                     'encryptedFields' in message
                         ? (message as EncryptedMessage).encryptedFields
                         : (message as DecryptedMessage).content;
-                usersCol.doc(id).update({
-                    conversations: [
-                        cleanUndefinedFields({
-                            ...matchingConvos[0],
-                            cid,
-                            name,
-                            avatar,
-                            unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
-                            lastMessageTime: message.timestamp,
-                            lastMessageContent,
-                            lastMessage: message,
-                            recipientId
-                        } as ConversationPreview),
-                        ...user.conversations.filter((c) => c.cid !== cid)
-                    ]
-                });
+                if (matchingConvos.length > 0) {
+                    unSeenMessages = matchingConvos[0].unSeenMessages;
+                    avatar = matchingConvos[0].avatar;
+                    if (!convo.group) {
+                        name = matchingConvos[0].name;
+                        recipientId = matchingConvos[0].recipientId;
+                    }
+                    await usersCol.doc(id).update({
+                        conversations: [
+                            cleanUndefinedFields({
+                                ...matchingConvos[0],
+                                cid: convo.id,
+                                name,
+                                avatar,
+                                unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
+                                lastMessageTime: message.timestamp,
+                                lastMessageContent,
+                                lastMessage: message,
+                                recipientId
+                            } as ConversationPreview),
+                            ...user.conversations.filter((c) => c.cid !== convo.id)
+                        ]
+                    });
+                } else {
+                    // add new preview for user
+                    const newPreview = {
+                        cid: convo.id,
+                        name,
+                        unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
+                        lastMessageTime: message.timestamp,
+                        lastMessageContent,
+                        lastMessage: message,
+                        recipientId,
+                        publicKey: convo.publicKey,
+                        avatar: getUserConversationAvatar(convo, user.id)
+                    } as ConversationPreview;
+                    await usersCol.doc(id).update({
+                        conversations: FieldValue.arrayUnion(newPreview)
+                    });
+                    return;
+                }
             }
         });
     } catch (err) {
@@ -105,7 +115,7 @@ const storeNewMessage = async (cid: string, message: Message) => {
         const convo = convoDoc.data() as Conversation;
         if (!convo) return Promise.reject('no such conversation');
         const participantIds = convo.participants.map((p) => p.id);
-        await handleUserConversationMessage(convo.id, convo.name, convo.group, participantIds, parsedMessage);
+        await handleUserConversationMessage(convo, participantIds, parsedMessage);
         if (message.encryptionLevel === 'encrypted') {
             await secretsService.updateKeyInfoForMessage(convo);
         }

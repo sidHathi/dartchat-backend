@@ -18,6 +18,7 @@ export type DBUserData = {
     publicKey?: string;
     keySalt?: string; // base64 encoded random prime number
     secrets?: string;
+    uiTheme?: 'dark' | 'light';
 };
 
 type UserData = {
@@ -36,6 +37,7 @@ type UserData = {
     publicKey?: string;
     keySalt?: string; // base64 encoded random prime number
     secrets?: string;
+    uiTheme?: 'dark' | 'light';
 };
 
 export default UserData;
