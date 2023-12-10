@@ -18,6 +18,7 @@ type Conversation = {
     publicKey?: string;
     keyInfo?: KeyInfo;
     adminIds?: string[];
+    messageDisappearTime?: number; // hours
 };
 
 export default Conversation;

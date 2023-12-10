@@ -7,6 +7,7 @@ import { Server, Socket } from 'socket.io';
 
 import { profilesRouter, usersRouter, socketsRouter, conversationsRouter } from './routers';
 import { isAuthenticated, socketAuth } from './middleware';
+import { scheduleDelete } from 'cloud-functions';
 
 dotenv.config();
 const app = express();
@@ -43,3 +44,9 @@ io.use(socketAuth).on('connection', (socket: Socket) => {
 server.listen(process.env.BACK_PORT, () => {
     console.log(`server running : http://${process.env.BACK_HOST}:${process.env.BACK_PORT}`);
 });
+
+const cloudFunctions = {
+    scheduleDelete
+};
+
+export default cloudFunctions;

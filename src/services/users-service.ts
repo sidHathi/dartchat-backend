@@ -400,6 +400,24 @@ const updateNotStatus = async (uid: string, cid: string, newStatus: Notification
     }
 };
 
+const setDevMode = async (uid: string, devMode: boolean) => {
+    try {
+        const user = await getUser(uid);
+        if (user) {
+            const updatedUser = {
+                ...user,
+                devMode
+            };
+            const updateRes = await updateUser(uid, updatedUser);
+            return updateRes;
+        }
+        return undefined;
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+};
+
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -418,7 +436,8 @@ const usersService = {
     setUserPublicKey,
     updatePreviewRole,
     updateConversationsForNewUserDetails,
-    updateNotStatus
+    updateNotStatus,
+    setDevMode
 };
 
 export default usersService;
