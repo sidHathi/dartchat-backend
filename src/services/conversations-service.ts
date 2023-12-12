@@ -461,6 +461,29 @@ const changeConversationUserRole = async (cid: string, actorId: string, uid: str
     }
 };
 
+const updateMessageDisappearTime = async (uid: string, cid: string, newDisappearTime: number | null) => {
+    try {
+        const currConvo = await getConversationInfo(cid);
+        const userProfile = currConvo.participants.find((u) => u.id === uid);
+        if (!userProfile || !(userProfile?.role === 'admin')) {
+            throw new Error('User lacks permissions');
+        }
+        if (currConvo.messageDisappearTime && newDisappearTime == null) {
+            const updateRes = await conversationsCol.doc(cid).update({
+                messageDisappearTime: FieldValue.delete()
+            });
+            return updateRes;
+        }
+        const updateRes = await conversationsCol.doc(cid).update({
+            messageDisappearTime: newDisappearTime
+        });
+        return updateRes;
+    } catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+};
+
 const conversationsService = {
     createNewConversation,
     getConversationInfo,
@@ -483,7 +506,8 @@ const conversationsService = {
     changeLikeIcon,
     resetLikeIcon,
     getConversationsInfo,
-    changeConversationUserRole
+    changeConversationUserRole,
+    updateMessageDisappearTime
 };
 
 export default conversationsService;

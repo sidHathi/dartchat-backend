@@ -379,6 +379,21 @@ const updateNotStatus = (uid, cid, newStatus) => __awaiter(void 0, void 0, void 
         return false;
     }
 });
+const setDevMode = (uid, devMode) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const user = yield getUser(uid);
+        if (user) {
+            const updatedUser = Object.assign(Object.assign({}, user), { devMode });
+            const updateRes = yield updateUser(uid, updatedUser);
+            return updateRes;
+        }
+        return undefined;
+    }
+    catch (err) {
+        console.log(err);
+        return Promise.reject(err);
+    }
+});
 const usersService = {
     getUser,
     getMultipleUsers,
@@ -397,6 +412,7 @@ const usersService = {
     setUserPublicKey,
     updatePreviewRole,
     updateConversationsForNewUserDetails,
-    updateNotStatus
+    updateNotStatus,
+    setDevMode
 };
 exports.default = usersService;

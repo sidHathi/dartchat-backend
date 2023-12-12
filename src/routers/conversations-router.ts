@@ -29,5 +29,6 @@ conversationsRouter.route('/:id/pushReencryptedMessages').post(conversationsCont
 conversationsRouter.route('/:id/changeKeySet').put(conversationsController.changeEncryptionKey);
 conversationsRouter.route('/:cid/:mid').delete(conversationsController.deleteMessage);
 conversationsRouter.route('/:cid/updateUserRole').put(conversationsController.updateUserRole);
+conversationsRouter.route('/:cid/updateMessageDisappearTime').put(conversationsController.updateMessageDisappearTime);
 
 export default conversationsRouter;
