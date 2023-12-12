@@ -15,4 +15,6 @@ usersRouter.route('/me/readKeyUpdates').post(controllers_1.usersController.readK
 usersRouter.route('/me/setKeySalt').post(controllers_1.usersController.setKeySalt);
 usersRouter.route('/me/setSecrets').post(controllers_1.usersController.setSecrets);
 usersRouter.route('/me/updatePublicKey').post(controllers_1.usersController.updatePublicKey);
+usersRouter.route('/me/updateUiTheme').put(controllers_1.usersController.updateUiTheme);
+usersRouter.route('/me/setDevMode').put(controllers_1.usersController.setDevMode);
 exports.default = usersRouter;

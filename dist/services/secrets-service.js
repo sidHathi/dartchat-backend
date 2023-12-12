@@ -88,14 +88,19 @@ const addUserSecretsForNewConversation = (newConvo, uid, userKeyMap) => __awaite
     }
 });
 const addUserSecretsForNewParticipants = (convo, newParticipants, userKeyMap) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         if (convo.publicKey) {
             yield performKeyUpdate(convo.id, newParticipants, userKeyMap, convo.publicKey);
         }
         const currentKeyInfo = convo.keyInfo;
+        const keySet = new Set(((_a = convo.keyInfo) === null || _a === void 0 ? void 0 : _a.privilegedUsers) || []);
         if (currentKeyInfo) {
             yield conversationsCol.doc(convo.id).update({
-                keyInfo: Object.assign(Object.assign({}, currentKeyInfo), { privilegedUsers: [...currentKeyInfo.privilegedUsers, ...Object.keys(userKeyMap)] })
+                keyInfo: Object.assign(Object.assign({}, currentKeyInfo), { privilegedUsers: [
+                        ...currentKeyInfo.privilegedUsers,
+                        ...Object.keys(userKeyMap).filter((key) => !keySet.has(key))
+                    ] })
             });
         }
         return true;

@@ -101,16 +101,17 @@ const handleNewAvatar = (socket, cid) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 const newParticipants = (socket, cid, profiles, userSocketMap, userKeyMap, pnService) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(`userKeyMap: ${JSON.stringify(userKeyMap)}`);
     socket.to(cid).emit('newConversationUsers', cid, profiles);
     const senderId = socket.data.user.uid;
     const convo = yield services_1.conversationsService.getConversationInfo(cid);
+    if (userKeyMap) {
+        yield services_1.secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
+    }
     yield Promise.all(profiles.map((p) => __awaiter(void 0, void 0, void 0, function* () {
         socket.to(p.id).emit('newConversationUsers', cid, [], userKeyMap);
         if (p.id !== senderId) {
             yield services_1.systemMessagingService.handleUserAdded(convo, p.id, senderId, socket);
-            if (userKeyMap) {
-                yield services_1.secretsService.addUserSecretsForNewParticipants(convo, profiles, userKeyMap);
-            }
         }
         else {
             yield services_1.systemMessagingService.handleUserJoins(convo, p, socket);

@@ -18,6 +18,7 @@ const pagination_1 = require("../pagination");
 const uuid_1 = require("uuid");
 const conversation_utils_1 = require("../utils/conversation-utils");
 const secrets_service_1 = __importDefault(require("./secrets-service"));
+const firestore_1 = require("firebase-admin/firestore");
 const conversationsCol = firebase_1.db.collection(process.env.FIREBASE_CONVERSATIONS_COL || 'conversations-dev');
 const usersCol = firebase_1.db.collection(process.env.FIREBASE_USERS_COL || 'users-dev');
 const generateConversationInitMessage = (newConversation, userId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -43,39 +44,52 @@ const generateConversationInitMessage = (newConversation, userId) => __awaiter(v
         return Promise.reject(err);
     }
 });
-const handleUserConversationMessage = (cid, cName, group, participantIds, message) => __awaiter(void 0, void 0, void 0, function* () {
+const handleUserConversationMessage = (convo, participantIds, message) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         participantIds.map((id) => __awaiter(void 0, void 0, void 0, function* () {
             const userDoc = yield usersCol.doc(id).get();
             if (userDoc.exists) {
                 const user = userDoc.data();
                 let unSeenMessages = 0;
-                const matchingConvos = user.conversations.filter((c) => c.cid === cid);
+                const matchingConvos = user.conversations.filter((c) => c.cid === convo.id);
                 let avatar;
-                let name = cName;
+                let name = convo.name;
                 let recipientId;
-                if (matchingConvos.length > 0) {
-                    unSeenMessages = matchingConvos[0].unSeenMessages;
-                    avatar = matchingConvos[0].avatar;
-                    if (!group) {
-                        name = matchingConvos[0].name;
-                        recipientId = matchingConvos[0].recipientId;
-                    }
-                }
-                else {
-                    return;
-                }
                 const lastMessageContent = 'encryptedFields' in message
                     ? message.encryptedFields
                     : message.content;
-                usersCol.doc(id).update({
-                    conversations: [
-                        (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, matchingConvos[0]), { cid,
-                            name,
-                            avatar, unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1, lastMessageTime: message.timestamp, lastMessageContent, lastMessage: message, recipientId })),
-                        ...user.conversations.filter((c) => c.cid !== cid)
-                    ]
-                });
+                if (matchingConvos.length > 0) {
+                    unSeenMessages = matchingConvos[0].unSeenMessages;
+                    avatar = matchingConvos[0].avatar;
+                    if (!convo.group) {
+                        name = matchingConvos[0].name;
+                        recipientId = matchingConvos[0].recipientId;
+                    }
+                    yield usersCol.doc(id).update({
+                        conversations: [
+                            (0, request_utils_1.cleanUndefinedFields)(Object.assign(Object.assign({}, matchingConvos[0]), { cid: convo.id, name,
+                                avatar, unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1, lastMessageTime: message.timestamp, lastMessageContent, lastMessage: message, recipientId })),
+                            ...user.conversations.filter((c) => c.cid !== convo.id)
+                        ]
+                    });
+                }
+                else {
+                    const newPreview = {
+                        cid: convo.id,
+                        name,
+                        unSeenMessages: id === message.senderId ? 0 : unSeenMessages + 1,
+                        lastMessageTime: message.timestamp,
+                        lastMessageContent,
+                        lastMessage: message,
+                        recipientId,
+                        publicKey: convo.publicKey,
+                        avatar: (0, conversation_utils_1.getUserConversationAvatar)(convo, user.id)
+                    };
+                    yield usersCol.doc(id).update({
+                        conversations: firestore_1.FieldValue.arrayUnion(newPreview)
+                    });
+                    return;
+                }
             }
         }));
     }
@@ -94,7 +108,7 @@ const storeNewMessage = (cid, message) => __awaiter(void 0, void 0, void 0, func
         if (!convo)
             return Promise.reject('no such conversation');
         const participantIds = convo.participants.map((p) => p.id);
-        yield handleUserConversationMessage(convo.id, convo.name, convo.group, participantIds, parsedMessage);
+        yield handleUserConversationMessage(convo, participantIds, parsedMessage);
         if (message.encryptionLevel === 'encrypted') {
             yield secrets_service_1.default.updateKeyInfoForMessage(convo);
         }

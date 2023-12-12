@@ -434,6 +434,22 @@ const updateUserRole: RequestHandler = async (req, res, next) => {
     }
 };
 
+const updateMessageDisappearTime: RequestHandler = async (req, res, next) => {
+    try {
+        const cid = req.params.cid;
+        const uid = res.locals.uid;
+        const updatedDisappearTime = req.body.newTime;
+        const updateRes = await conversationsService.updateMessageDisappearTime(uid, cid, updatedDisappearTime);
+        res.status(200).send(updateRes);
+    } catch (err) {
+        const message = getErrorMessage(err);
+        if (message && message === 'User lacks permissions') {
+            res.status(401).send('User lacks permissions');
+        }
+        next(err);
+    }
+};
+
 const conversationsController = {
     getConversation,
     getConversationInfo,
@@ -462,7 +478,8 @@ const conversationsController = {
     pushReencryptedMessages,
     changeEncryptionKey,
     deleteMessage,
-    updateUserRole
+    updateUserRole,
+    updateMessageDisappearTime
 };
 
 export default conversationsController;

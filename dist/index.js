@@ -26,6 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.scheduleDelete = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
@@ -34,6 +35,8 @@ const http = __importStar(require("http"));
 const socket_io_1 = require("socket.io");
 const routers_1 = require("./routers");
 const middleware_1 = require("./middleware");
+const cloud_functions_1 = require("cloud-functions");
+Object.defineProperty(exports, "scheduleDelete", { enumerable: true, get: function () { return cloud_functions_1.scheduleDelete; } });
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());

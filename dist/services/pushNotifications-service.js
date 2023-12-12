@@ -95,7 +95,9 @@ const pushNotificationsService = {
                     })
                 };
                 const notification = {
-                    title: `${convo.group && message.senderProfile ? convo.name : (_a = message.senderProfile) === null || _a === void 0 ? void 0 : _a.displayName}`,
+                    title: `${(convo.group && message.senderProfile) || message.messageType === 'system'
+                        ? convo.name
+                        : (_a = message.senderProfile) === null || _a === void 0 ? void 0 : _a.displayName}`,
                     body: `${convo.group && message.senderProfile ? message.senderProfile.displayName + ': ' : ''}${this.getMessageBody(message) || 'encrypted message'}`
                 };
                 yield Promise.all(recipientIds.map((id) => __awaiter(this, void 0, void 0, function* () {
@@ -433,6 +435,10 @@ const pushNotificationsService = {
                 const recipientTokens = yield this.getRecipientTokens(recipientIds);
                 if (recipientTokens.length < 1)
                     return;
+                const notification = {
+                    title: convo.name,
+                    body: message.content
+                };
                 const data = {
                     type: 'message',
                     stringifiedBody: JSON.stringify({
@@ -446,7 +452,8 @@ const pushNotificationsService = {
                 };
                 yield firebase_1.default.messaging().sendEachForMulticast({
                     tokens: recipientTokens,
-                    data
+                    data,
+                    notification
                 });
             }
             catch (err) {
