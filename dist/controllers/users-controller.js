@@ -152,6 +152,29 @@ const updatePublicKey = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         next(err);
     }
 });
+const updateUiTheme = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const uid = res.locals.uid;
+        const newTheme = req.body.uiTheme;
+        const user = yield services_1.usersService.getUser(uid);
+        const updatedUser = Object.assign(Object.assign({}, user), { uiTheme: newTheme });
+        const updateRes = yield services_1.usersService.updateUser(uid, updatedUser);
+        res.status(200).send(updateRes);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+const setDevMode = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const uid = res.locals.uid;
+        const updateRes = yield services_1.usersService.setDevMode(uid, req.body.devMode);
+        res.status(200).send(updateRes);
+    }
+    catch (err) {
+        next(err);
+    }
+});
 const usersController = {
     getCurrentUser,
     createNewUser,
@@ -161,6 +184,8 @@ const usersController = {
     readKeyUpdates,
     setKeySalt,
     setSecrets,
-    updatePublicKey
+    updatePublicKey,
+    updateUiTheme,
+    setDevMode
 };
 exports.default = usersController;

@@ -158,6 +158,16 @@ const updateUiTheme: RequestHandler = async (req, res, next) => {
     }
 };
 
+const setDevMode: RequestHandler = async (req, res, next) => {
+    try {
+        const uid = res.locals.uid;
+        const updateRes = await usersService.setDevMode(uid, req.body.devMode);
+        res.status(200).send(updateRes);
+    } catch (err) {
+        next(err);
+    }
+};
+
 const usersController = {
     getCurrentUser,
     createNewUser,
@@ -168,7 +178,8 @@ const usersController = {
     setKeySalt,
     setSecrets,
     updatePublicKey,
-    updateUiTheme
+    updateUiTheme,
+    setDevMode
 };
 
 export default usersController;

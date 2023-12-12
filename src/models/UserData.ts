@@ -1,5 +1,4 @@
 import ConversationPreview, { DBConversationPreview } from './ConversationPreview';
-import UserProfile from './UserProfile';
 import AvatarImage from './AvatarImage';
 
 export type DBUserData = {
@@ -19,6 +18,8 @@ export type DBUserData = {
     keySalt?: string; // base64 encoded random prime number
     secrets?: string;
     uiTheme?: 'dark' | 'light';
+    devMode?: boolean;
+    systemRole?: 'admin' | 'plebian';
 };
 
 type UserData = {
@@ -38,6 +39,8 @@ type UserData = {
     keySalt?: string; // base64 encoded random prime number
     secrets?: string;
     uiTheme?: 'dark' | 'light';
+    devMode?: boolean;
+    systemRole?: 'admin' | 'plebian';
 };
 
 export default UserData;

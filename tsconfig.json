@@ -17,9 +17,10 @@
       "strict": true,
       "noImplicitReturns": true,
       "noFallthroughCasesInSwitch": true,
-      "skipLibCheck": true
+      "skipLibCheck": true,
+      "allowJs": true
     },
-    "include": ["./src/**/*.tsx", "./src/**/*.ts"],
+    "include": ["./src/**/*.tsx", "./src/**/*.ts", "functions/cloud-functions.ts"],
     "exclude": ["node_modules", "test/**/*.ts"]
   }
   
