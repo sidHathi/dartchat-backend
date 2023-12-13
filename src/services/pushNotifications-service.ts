@@ -33,7 +33,8 @@ export type PushNotificationsService = {
     pushMessageDelete: (convo: Conversation, senderId: string, mid: string) => Promise<void>;
     // TODO: newDetails push + role change push
     pushSystemMessage: (convo: Conversation, message: DecryptedMessage) => Promise<void>;
-    pushRoleChange: (cid: string, uid: string, newRole: ChatRole) => Promise<void>;
+    pushRoleChange: (convo: Conversation, uid: string, newRole: ChatRole) => Promise<void>;
+    pushMessageDisappearTimeChange: (convo: Conversation, uid: string, newTime: number | null) => Promise<void>;
 };
 
 const pushNotificationsService: PushNotificationsService = {
@@ -475,15 +476,38 @@ const pushNotificationsService: PushNotificationsService = {
             return;
         }
     },
-    async pushRoleChange(cid, uid, newRole) {
+    async pushRoleChange(convo, uid, newRole) {
         try {
-            const recipients = await this.getRecipientTokens([uid]);
+            const recipientIds = convo.participants.filter((p) => p.id !== uid).map((p) => p.id);
+            const recipients = await this.getRecipientTokens(recipientIds);
 
             const data: PNPacket = {
                 type: 'roleChanged',
                 stringifiedBody: JSON.stringify({
-                    cid,
+                    cid: convo.id,
                     newRole
+                })
+            };
+
+            await admin.messaging().sendEachForMulticast({
+                tokens: recipients,
+                data
+            });
+        } catch (err) {
+            console.log(err);
+            return;
+        }
+    },
+    async pushMessageDisappearTimeChange(convo, uid, newTime) {
+        try {
+            const recipientIds = convo.participants.filter((p) => p.id !== uid).map((p) => p.id);
+            const recipients = await this.getRecipientTokens(recipientIds);
+
+            const data: PNPacket = {
+                type: 'messageDisappearTimeChanged',
+                stringifiedBody: JSON.stringify({
+                    cid: convo.id,
+                    newTime
                 })
             };
 

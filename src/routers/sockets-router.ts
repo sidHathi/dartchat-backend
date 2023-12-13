@@ -96,6 +96,10 @@ const socketsRouter = (socket: Socket, server: Server) => {
         conversationsSocket.handleUserRoleChanged(socket, cid, uid, newRole, pnService)
     );
 
+    socket.on('messageDisappearTimeChanged', (cid: string, newTime: number | null) =>
+        conversationsSocket.handleMessageDisappearTimeChanged(socket, cid, newTime, pnService)
+    );
+
     socket.on('forceDisconnect', () => {
         socket.disconnect(true);
     });
