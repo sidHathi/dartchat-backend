@@ -226,6 +226,31 @@ const handleUserRoleChanged = async (
     }
 };
 
+const handleMessageDisappearTimeChanged = async (
+    convo: Conversation,
+    newTime: number | null,
+    socket?: Socket,
+    pnService?: PushNotificationsService
+) => {
+    let timeString = `${newTime} hours`;
+    if (newTime == null) {
+        timeString = 'never';
+    } else if (newTime >= 24) {
+        if (newTime < 24 * 6) {
+            timeString = '1 day';
+        } else if (newTime < 30 * 24) {
+            timeString = '1 week';
+        } else {
+            timeString = '1 month';
+        }
+    }
+
+    const messageContent =
+        newTime == null ? 'Message auto delete turned off' : `Message will disappear after ${timeString}`;
+    const message = genSystemMessage(messageContent);
+    await sendSystemMessage(message, convo, socket, pnService);
+};
+
 const systemMessagingService = {
     sendEventResponse,
     scheduleEvent,
@@ -238,7 +263,8 @@ const systemMessagingService = {
     handleUserAdded,
     handleChatAvatarChanged,
     handleChatNameChanged,
-    handleUserRoleChanged
+    handleUserRoleChanged,
+    handleMessageDisappearTimeChanged
 };
 
 export default systemMessagingService;

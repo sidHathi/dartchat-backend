@@ -279,7 +279,24 @@ const handleUserRoleChanged = async (
         const actorId = socket.data.user.uid;
         await systemMessagingService.handleUserRoleChanged(convo, actorId, uid, newRole, socket);
         socket.to(cid).emit('userRoleChanged', cid, uid, newRole);
-        pnService && pnService.pushRoleChange(cid, uid, newRole);
+        pnService && pnService.pushRoleChange(convo, uid, newRole);
+    } catch (err) {
+        console.log(err);
+    }
+};
+
+const handleMessageDisappearTimeChanged = async (
+    socket: Socket,
+    cid: string,
+    newTime: number | null,
+    pnService?: PushNotificationsService
+): Promise<void> => {
+    try {
+        const uid = socket.data.user.uid;
+        const convo = await conversationsService.getConversationInfo(cid);
+        await systemMessagingService.handleMessageDisappearTimeChanged(convo, newTime, socket, pnService);
+        socket.to(cid).emit('messageDisappearTimeChanged', cid, newTime);
+        pnService && pnService.pushMessageDisappearTimeChange(convo, uid, newTime);
     } catch (err) {
         console.log(err);
     }
@@ -302,7 +319,8 @@ const conversationsSocket = {
     removeEvent,
     handleKeyChange,
     deleteMessage,
-    handleUserRoleChanged
+    handleUserRoleChanged,
+    handleMessageDisappearTimeChanged
 };
 
 export default conversationsSocket;
