@@ -246,7 +246,7 @@ const handleMessageDisappearTimeChanged = async (
     }
 
     const messageContent =
-        newTime == null ? 'Message auto delete turned off' : `Message will disappear after ${timeString}`;
+        newTime == null ? 'Message auto delete turned off' : `New messages will disappear after ${timeString}`;
     const message = genSystemMessage(messageContent);
     await sendSystemMessage(message, convo, socket, pnService);
 };
